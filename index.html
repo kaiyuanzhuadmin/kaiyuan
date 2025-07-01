@@ -16,7 +16,8 @@
                         accent: '#FF69B4',
                         board: '#DEB887',
                         opponent: '#FFFFFF',
-                        player: '#000000'
+                        player: '#000000',
+                        highlight: '#FF69B4'
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -167,6 +168,7 @@
             let gameOver = false;
             let difficulty = 2; // 1:简单, 2:中等, 3:困难
             let moveHistory = []; // 记录落子历史
+            let lastMovePosition = null; // 记录最后一步的位置
             
             // DOM元素
             const canvas = document.getElementById('board');
@@ -204,6 +206,7 @@
                 currentPlayer = 1; // 玩家执黑先行
                 gameOver = false;
                 moveHistory = [];
+                lastMovePosition = null;
                 
                 // 更新UI
                 updateGameStatus();
@@ -260,6 +263,11 @@
                         }
                     }
                 }
+                
+                // 绘制最后一步的标记
+                if (lastMovePosition && gameBoard[lastMovePosition.x][lastMovePosition.y] === 2) {
+                    drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
+                }
             }
             
             // 绘制星位
@@ -309,6 +317,18 @@
                 ctx.fill();
                 ctx.lineWidth = 1;
                 ctx.stroke();
+            }
+            
+            // 绘制最后一步的标记
+            function drawLastMoveMarker(x, y) {
+                const centerX = BOARD_PADDING + x * CELL_SIZE;
+                const centerY = BOARD_PADDING + y * CELL_SIZE;
+                const radius = PIECE_SIZE / 4;
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = '#FF69B4'; // 使用亮粉色作为标记颜色
+                ctx.fill();
             }
             
             // 检查是否有玩家获胜
@@ -374,6 +394,7 @@
                 // 记录落子
                 gameBoard[x][y] = 1;
                 moveHistory.push({x, y, player: 1});
+                lastMovePosition = {x, y};
                 
                 // 更新UI
                 drawBoard();
@@ -413,6 +434,7 @@
                         // 记录开元落子
                         gameBoard[x][y] = 2;
                         moveHistory.push({x, y, player: 2});
+                        lastMovePosition = {x, y};
                         
                         // 更新UI
                         drawBoard();
@@ -787,6 +809,13 @@
                             currentPlayer = 1;
                         }
                     }
+                }
+                
+                // 更新最后一步位置
+                if (moveHistory.length > 0) {
+                    lastMovePosition = moveHistory[moveHistory.length - 1];
+                } else {
+                    lastMovePosition = null;
                 }
                 
                 // 更新UI
