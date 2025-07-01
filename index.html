@@ -45,6 +45,39 @@
                 0%, 100% { opacity: 0.3; }
                 50% { opacity: 1; }
             }
+            /* 模态框样式 */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+            .modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 300px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            .close {
+                color: #aaa;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
+            }
+            .close:hover,
+            .close:focus {
+                color: black;
+                text-decoration: none;
+                cursor: pointer;
+            }
         }
     </style>
 </head>
@@ -158,6 +191,15 @@
         </footer>
     </div>
 
+    <!-- 胜利提示模态框 -->
+    <div id="winner-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="winner-modal-title">胜利提示</h2>
+            <p id="winner-modal-message"></p>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // 游戏常量
@@ -193,6 +235,10 @@
             const thinkingIndicator = document.getElementById('thinking');
             const modeToggle = document.getElementById('mode-toggle');
             const modeText = document.getElementById('mode-text');
+            const winnerModal = document.getElementById('winner-modal');
+            const winnerModalTitle = document.getElementById('winner-modal-title');
+            const winnerModalMessage = document.getElementById('winner-modal-message');
+            const closeModalBtn = document.querySelector('.close');
             
             // 设置Canvas尺寸
             function setCanvasSize() {
@@ -219,6 +265,7 @@
                 updateGameStatus();
                 clearGameLog();
                 logMessage('游戏开始，请点击棋盘落子');
+                winnerModal.style.display = 'none';
             }
             
             // 绘制棋盘
@@ -410,8 +457,10 @@
                 // 检查玩家是否获胜
                 if (checkWin(x, y, currentPlayer)) {
                     gameOver = true;
-                    updateGameStatus(`玩家${currentPlayer}获胜！`);
-                    logMessage(`恭喜，玩家${currentPlayer}赢了！`);
+                    const winnerMessage = currentPlayer === 1 ? '玩家1获胜！' : (gameMode === 1 ? '开元获胜！' : '玩家2获胜！');
+                    updateGameStatus(winnerMessage);
+                    logMessage(`恭喜，${winnerMessage}`);
+                    showWinnerModal(winnerMessage);
                     return;
                 }
                 
@@ -420,6 +469,7 @@
                     gameOver = true;
                     updateGameStatus('平局！');
                     logMessage('游戏结束，平局！');
+                    showWinnerModal('平局！');
                     return;
                 }
                 
@@ -453,6 +503,7 @@
                                 gameOver = true;
                                 updateGameStatus('开元获胜！');
                                 logMessage('开元赢了，再试一次吧！');
+                                showWinnerModal('开元获胜！');
                                 return;
                             }
                             
@@ -461,6 +512,7 @@
                                 gameOver = true;
                                 updateGameStatus('平局！');
                                 logMessage('游戏结束，平局！');
+                                showWinnerModal('平局！');
                                 return;
                             }
                             
@@ -730,6 +782,25 @@
                 modeText.textContent = modeNames[gameMode - 1];
                 initGame();
                 logMessage(`游戏模式已切换为: ${modeNames[gameMode - 1]}`);
+            }
+
+            // 显示胜利提示模态框
+            function showWinnerModal(message) {
+                winnerModalTitle.textContent = '胜利提示';
+                winnerModalMessage.textContent = message;
+                winnerModal.style.display = 'block';
+            }
+
+            // 关闭模态框
+            closeModalBtn.onclick = function() {
+                winnerModal.style.display = 'none';
+            }
+
+            // 点击模态框外部关闭模态框
+            window.onclick = function(event) {
+                if (event.target == winnerModal) {
+                    winnerModal.style.display = 'none';
+                }
             }
             
             // 事件监听
