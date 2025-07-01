@@ -136,6 +136,10 @@
                         <button id="mode-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
                             <i class="fa fa-users mr-2"></i>模式: <span id="mode-text">玩家 vs 开元</span>
                         </button>
+                        <!-- 添加音乐播放/暂停按钮 -->
+                        <button id="music-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                            <i class="fa fa-music mr-2"></i>音乐: <span id="music-text">暂停</span>
+                        </button>
                     </div>
                 </div>
 
@@ -200,6 +204,9 @@
         </div>
     </div>
 
+    <!-- 添加音频元素 -->
+    <audio id="music" src="jasmine_flower.mp3" loop></audio>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // 游戏常量
@@ -239,7 +246,11 @@
             const winnerModalTitle = document.getElementById('winner-modal-title');
             const winnerModalMessage = document.getElementById('winner-modal-message');
             const closeModalBtn = document.querySelector('.close');
-            
+            // 音乐相关元素
+            const music = document.getElementById('music');
+            const musicToggle = document.getElementById('music-toggle');
+            const musicText = document.getElementById('music-text');
+
             // 设置Canvas尺寸
             function setCanvasSize() {
                 const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2; // 调整画布大小，使边界能放棋子
@@ -820,132 +831,91 @@
                     }
                 }
             }
-            
-            // 记录游戏日志
+
+            // 音乐播放/暂停功能
+            musicToggle.addEventListener('click', () => {
+                if (music.paused) {
+                    music.play();
+                    musicText.textContent = '播放';
+                } else {
+                    music.pause();
+                    musicText.textContent = '暂停';
+                }
+            });
+
+            // 初始化游戏
+            initGame();
+
+            // 处理棋盘点击事件
+            canvas.addEventListener('click', (event) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.round((event.clientX - rect.left - BOARD_PADDING) / CELL_SIZE);
+                const y = Math.round((event.clientY - rect.top - BOARD_PADDING) / CELL_SIZE);
+
+                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                    handlePlayerMove(x, y);
+                }
+            });
+
+            // 新游戏按钮事件
+            newGameBtn.addEventListener('click', () => {
+                initGame();
+            });
+
+            // 悔棋按钮事件
+            undoBtn.addEventListener('click', () => {
+                if (moveHistory.length > 0) {
+                    const lastMove = moveHistory.pop();
+                    gameBoard[lastMove.x][lastMove.y] = 0;
+                    lastMovePosition = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
+                    currentPlayer = currentPlayer === 1 ? 2 : 1;
+                    drawBoard();
+                    updateGameStatus();
+                    logMessage(`撤销玩家${lastMove.player}在(${lastMove.x + 1},${lastMove.y + 1})的落子`);
+                }
+            });
+
+            // 难度切换按钮事件
+            difficultyToggle.addEventListener('click', () => {
+                difficulty = (difficulty % 3) + 1;
+                const difficultyLevels = ['简单', '中等', '困难'];
+                difficultyText.textContent = difficultyLevels[difficulty - 1];
+                logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]}`);
+            });
+
+            // 模式切换按钮事件
+            modeToggle.addEventListener('click', () => {
+                gameMode = gameMode === 1 ? 2 : 1;
+                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
+                modeText.textContent = modeNames[gameMode - 1];
+                logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
+            });
+
+            // 关闭模态框按钮事件
+            closeModalBtn.addEventListener('click', () => {
+                winnerModal.style.display = 'none';
+            });
+
+            // 游戏日志记录
             function logMessage(message) {
                 const logEntry = document.createElement('p');
                 logEntry.textContent = message;
                 gameLog.appendChild(logEntry);
                 gameLog.scrollTop = gameLog.scrollHeight;
             }
-            
-            // 清空游戏日志
+
+            // 清除游戏日志
             function clearGameLog() {
                 gameLog.innerHTML = '';
             }
-            
-            // 悔棋功能
-            function undoMove() {
-                if (moveHistory.length === 0 || gameOver) {
-                    return;
-                }
-                
-                // 移除最后两步（玩家和开元的移动）
-                for (let i = 0; i < 2; i++) {
-                    if (moveHistory.length > 0) {
-                        const lastMove = moveHistory.pop();
-                        gameBoard[lastMove.x][lastMove.y] = 0;
-                        
-                        // 如果移除了开元的移动，需要切换回玩家回合
-                        if (lastMove.player === 2) {
-                            currentPlayer = 1;
-                        }
-                    }
-                }
-                
-                // 更新最后一步位置
-                if (moveHistory.length > 0) {
-                    lastMovePosition = moveHistory[moveHistory.length - 1];
-                } else {
-                    lastMovePosition = null;
-                }
-                
-                // 更新UI
-                drawBoard();
-                updateGameStatus();
-                logMessage('你撤销了一步');
-            }
-            
-            // 切换难度
-            function toggleDifficulty() {
-                difficulty = (difficulty % 3) + 1; // 在1(简单)、2(中等)和3(困难)之间循环
-                
-                const difficultyNames = ['简单', '中等', '困难'];
-                difficultyText.textContent = difficultyNames[difficulty - 1];
-                
-                logMessage(`难度已调整为: ${difficultyNames[difficulty - 1]}`);
-            }
-            
-            // 切换模式
-            function toggleMode() {
-                gameMode = gameMode === 1 ? 2 : 1;
-                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
-                modeText.textContent = modeNames[gameMode - 1];
-                initGame();
-                logMessage(`游戏模式已切换为: ${modeNames[gameMode - 1]}`);
-            }
 
-            // 显示胜利提示模态框
+            // 显示胜利模态框
             function showWinnerModal(message) {
                 winnerModalTitle.textContent = '胜利提示';
                 winnerModalMessage.textContent = message;
                 winnerModal.style.display = 'block';
             }
-
-            // 关闭模态框
-            closeModalBtn.onclick = function() {
-                winnerModal.style.display = 'none';
-            }
-
-            // 点击模态框外部关闭模态框
-            window.onclick = function(event) {
-                if (event.target == winnerModal) {
-                    winnerModal.style.display = 'none';
-                }
-            }
-            
-            // 事件监听
-            canvas.addEventListener('click', (e) => {
-                if (gameOver) {
-                    return;
-                }
-                
-                // 计算点击位置对应的棋盘坐标
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                
-                const clickX = (e.clientX - rect.left) * scaleX;
-                const clickY = (e.clientY - rect.top) * scaleY;
-                
-                const gridX = Math.round((clickX - BOARD_PADDING) / CELL_SIZE);
-                const gridY = Math.round((clickY - BOARD_PADDING) / CELL_SIZE);
-                
-                if (gridX >= 0 && gridX < BOARD_SIZE && gridY >= 0 && gridY < BOARD_SIZE) {
-                    handlePlayerMove(gridX, gridY);
-                }
-            });
-            
-            newGameBtn.addEventListener('click', () => {
-                initGame();
-                logMessage('新游戏开始！');
-            });
-            
-            undoBtn.addEventListener('click', undoMove);
-            
-            difficultyToggle.addEventListener('click', toggleDifficulty);
-            
-            modeToggle.addEventListener('click', toggleMode);
-            
-            // 窗口大小变化时重绘棋盘
-            window.addEventListener('resize', () => {
-                drawBoard();
-            });
-            
-            // 初始化游戏
-            initGame();
         });
     </script>
 </body>
 </html>
-    
