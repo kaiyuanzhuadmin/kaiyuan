@@ -166,7 +166,7 @@
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // 0:空, 1:玩家, 2:开元
             let currentPlayer = 1; // 1:玩家, 2:开元
             let gameOver = false;
-            let difficulty = 2; // 1:简单, 2:中等, 3:困难
+            let difficulty = 2; // 1:简单, 2:中等
             let moveHistory = []; // 记录落子历史
             let lastMovePosition = null; // 记录最后一步的位置
             
@@ -189,7 +189,7 @@
             
             // 设置Canvas尺寸
             function setCanvasSize() {
-                const size = BOARD_SIZE * CELL_SIZE + BOARD_PADDING * 2;
+                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2; // 调整画布大小，使边界能放棋子
                 canvas.width = size;
                 canvas.height = size;
                 canvas.style.width = `${size}px`;
@@ -216,7 +216,7 @@
             
             // 绘制棋盘
             function drawBoard() {
-                const size = BOARD_SIZE * CELL_SIZE + BOARD_PADDING * 2;
+                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
                 ctx.clearRect(0, 0, size, size);
                 
                 // 绘制棋盘背景
@@ -494,38 +494,6 @@
                     return bestMove;
                 }
                 
-                // 困难AI：会进行多层思考，考虑更多的可能性
-                if (difficulty === 3) {
-                    // 实现Alpha-Beta剪枝算法
-                    const depth = 3; // 搜索深度
-                    let bestScore = -Infinity;
-                    let bestMove = null;
-                    
-                    // 遍历所有可能的移动
-                    for (let i = 0; i < BOARD_SIZE; i++) {
-                        for (let j = 0; j < BOARD_SIZE; j++) {
-                            if (gameBoard[i][j] === 0) {
-                                // 尝试这个移动
-                                gameBoard[i][j] = 2;
-                                
-                                // 评估这个移动
-                                const score = minimax(depth, -Infinity, Infinity, false);
-                                
-                                // 撤销移动
-                                gameBoard[i][j] = 0;
-                                
-                                // 如果这个移动更好，记录下来
-                                if (score > bestScore) {
-                                    bestScore = score;
-                                    bestMove = {x: i, y: j, score};
-                                }
-                            }
-                        }
-                    }
-                    
-                    return bestMove;
-                }
-                
                 return makeRandomMove();
             }
             
@@ -659,97 +627,6 @@
                 return maxScore;
             }
             
-            // Minimax算法（带Alpha-Beta剪枝）
-            function minimax(depth, alpha, beta, isMaximizing) {
-                // 检查游戏是否结束或达到最大深度
-                if (depth === 0) {
-                    return evaluateBoard();
-                }
-                
-                if (isMaximizing) {
-                    let maxScore = -Infinity;
-                    
-                    for (let i = 0; i < BOARD_SIZE; i++) {
-                        for (let j = 0; j < BOARD_SIZE; j++) {
-                            if (gameBoard[i][j] === 0) {
-                                // 尝试这个移动
-                                gameBoard[i][j] = 2;
-                                
-                                // 递归评估
-                                const score = minimax(depth - 1, alpha, beta, false);
-                                
-                                // 撤销移动
-                                gameBoard[i][j] = 0;
-                                
-                                maxScore = Math.max(maxScore, score);
-                                alpha = Math.max(alpha, score);
-                                
-                                // Alpha-Beta剪枝
-                                if (beta <= alpha) {
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (beta <= alpha) {
-                            break;
-                        }
-                    }
-                    
-                    return maxScore;
-                } else {
-                    let minScore = Infinity;
-                    
-                    for (let i = 0; i < BOARD_SIZE; i++) {
-                        for (let j = 0; j < BOARD_SIZE; j++) {
-                            if (gameBoard[i][j] === 0) {
-                                // 尝试这个移动
-                                gameBoard[i][j] = 1;
-                                
-                                // 递归评估
-                                const score = minimax(depth - 1, alpha, beta, true);
-                                
-                                // 撤销移动
-                                gameBoard[i][j] = 0;
-                                
-                                minScore = Math.min(minScore, score);
-                                beta = Math.min(beta, score);
-                                
-                                // Alpha-Beta剪枝
-                                if (beta <= alpha) {
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (beta <= alpha) {
-                            break;
-                        }
-                    }
-                    
-                    return minScore;
-                }
-            }
-            
-            // 评估整个棋盘
-            function evaluateBoard() {
-                let opponentScore = 0;
-                let playerScore = 0;
-                
-                // 评估开元的分数
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 2) {
-                            opponentScore += evaluatePosition(i, j, 2);
-                        } else if (gameBoard[i][j] === 1) {
-                            playerScore += evaluatePosition(i, j, 1);
-                        }
-                    }
-                }
-                
-                return opponentScore - playerScore;
-            }
-            
             // 更新游戏状态UI
             function updateGameStatus(message) {
                 if (message) {
@@ -826,9 +703,9 @@
             
             // 切换难度
             function toggleDifficulty() {
-                difficulty = (difficulty % 3) + 1;
+                difficulty = (difficulty % 2) + 1; // 只在1(简单)和2(中等)之间切换
                 
-                const difficultyNames = ['简单', '中等', '困难'];
+                const difficultyNames = ['简单', '中等'];
                 difficultyText.textContent = difficultyNames[difficulty - 1];
                 
                 logMessage(`难度已调整为: ${difficultyNames[difficulty - 1]}`);
