@@ -100,6 +100,9 @@
                         <button id="difficulty-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
                             <i class="fa fa-bolt mr-2"></i>难度: <span id="difficulty-text">中等</span>
                         </button>
+                        <button id="mode-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                            <i class="fa fa-users mr-2"></i>模式: <span id="mode-text">玩家 vs 开元</span>
+                        </button>
                     </div>
                 </div>
 
@@ -170,6 +173,7 @@
             let difficulty = 2; // 1:简单, 2:中等
             let moveHistory = []; // 记录落子历史
             let lastMovePosition = null; // 记录最后一步的位置
+            let gameMode = 1; // 1: 玩家 vs 开元, 2: 玩家 vs 玩家
             
             // DOM元素
             const canvas = document.getElementById('board');
@@ -187,6 +191,8 @@
             const difficultyText = document.getElementById('difficulty-text');
             const gameLog = document.getElementById('game-log');
             const thinkingIndicator = document.getElementById('thinking');
+            const modeToggle = document.getElementById('mode-toggle');
+            const modeText = document.getElementById('mode-text');
             
             // 设置Canvas尺寸
             function setCanvasSize() {
@@ -266,7 +272,7 @@
                 }
                 
                 // 绘制最后一步的标记
-                if (lastMovePosition && gameBoard[lastMovePosition.x][lastMovePosition.y] === 2) {
+                if (lastMovePosition) {
                     drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
                 }
             }
@@ -388,24 +394,24 @@
             
             // 处理玩家落子
             function handlePlayerMove(x, y) {
-                if (gameOver || currentPlayer !== 1 || gameBoard[x][y] !== 0) {
+                if (gameOver || gameBoard[x][y] !== 0) {
                     return;
                 }
                 
                 // 记录落子
-                gameBoard[x][y] = 1;
-                moveHistory.push({x, y, player: 1});
+                gameBoard[x][y] = currentPlayer;
+                moveHistory.push({x, y, player: currentPlayer});
                 lastMovePosition = {x, y};
                 
                 // 更新UI
                 drawBoard();
-                logMessage(`玩家在(${x+1},${y+1})落子`);
+                logMessage(`玩家${currentPlayer}在(${x+1},${y+1})落子`);
                 
                 // 检查玩家是否获胜
-                if (checkWin(x, y, 1)) {
+                if (checkWin(x, y, currentPlayer)) {
                     gameOver = true;
-                    updateGameStatus('玩家获胜！');
-                    logMessage('恭喜，你赢了！');
+                    updateGameStatus(`玩家${currentPlayer}获胜！`);
+                    logMessage(`恭喜，玩家${currentPlayer}赢了！`);
                     return;
                 }
                 
@@ -417,51 +423,53 @@
                     return;
                 }
                 
-                // 切换到开元回合
-                currentPlayer = 2;
+                // 切换玩家
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
                 updateGameStatus();
                 
-                // 显示开元思考指示器
-                thinkingIndicator.classList.remove('hidden');
-                
-                // 开元思考（延迟执行，模拟思考时间）
-                setTimeout(() => {
-                    const move = makeMove();
-                    thinkingIndicator.classList.add('hidden');
+                if (gameMode === 1 && currentPlayer === 2) {
+                    // 显示开元思考指示器
+                    thinkingIndicator.classList.remove('hidden');
                     
-                    if (move) {
-                        const {x, y} = move;
+                    // 开元思考（延迟执行，模拟思考时间）
+                    setTimeout(() => {
+                        const move = makeMove();
+                        thinkingIndicator.classList.add('hidden');
                         
-                        // 记录开元落子
-                        gameBoard[x][y] = 2;
-                        moveHistory.push({x, y, player: 2});
-                        lastMovePosition = {x, y};
-                        
-                        // 更新UI
-                        drawBoard();
-                        logMessage(`开元在(${x+1},${y+1})落子`);
-                        
-                        // 检查开元是否获胜
-                        if (checkWin(x, y, 2)) {
-                            gameOver = true;
-                            updateGameStatus('开元获胜！');
-                            logMessage('开元赢了，再试一次吧！');
-                            return;
+                        if (move) {
+                            const {x, y} = move;
+                            
+                            // 记录开元落子
+                            gameBoard[x][y] = 2;
+                            moveHistory.push({x, y, player: 2});
+                            lastMovePosition = {x, y};
+                            
+                            // 更新UI
+                            drawBoard();
+                            logMessage(`开元在(${x+1},${y+1})落子`);
+                            
+                            // 检查开元是否获胜
+                            if (checkWin(x, y, 2)) {
+                                gameOver = true;
+                                updateGameStatus('开元获胜！');
+                                logMessage('开元赢了，再试一次吧！');
+                                return;
+                            }
+                            
+                            // 检查棋盘是否已满
+                            if (isBoardFull()) {
+                                gameOver = true;
+                                updateGameStatus('平局！');
+                                logMessage('游戏结束，平局！');
+                                return;
+                            }
+                            
+                            // 切换到玩家回合
+                            currentPlayer = 1;
+                            updateGameStatus();
                         }
-                        
-                        // 检查棋盘是否已满
-                        if (isBoardFull()) {
-                            gameOver = true;
-                            updateGameStatus('平局！');
-                            logMessage('游戏结束，平局！');
-                            return;
-                        }
-                        
-                        // 切换到玩家回合
-                        currentPlayer = 1;
-                        updateGameStatus();
-                    }
-                }, 500); // 开元思考时间，最多2秒
+                    }, 500); // 开元思考时间，最多2秒
+                }
             }
             
             // 开元落子
@@ -634,9 +642,12 @@
                     gameStatus.textContent = message;
                     winnerInfo.classList.remove('hidden');
                     
-                    if (message.includes('玩家')) {
+                    if (message.includes('玩家1')) {
                         winnerIndicator.className = 'w-5 h-5 rounded-full bg-player border-2 border-gray-300 mr-2 piece-shadow';
-                        winnerText.textContent = '玩家';
+                        winnerText.textContent = '玩家1';
+                    } else if (message.includes('玩家2')) {
+                        winnerIndicator.className = 'w-5 h-5 rounded-full bg-opponent mr-2 piece-shadow';
+                        winnerText.textContent = '玩家2';
                     } else if (message.includes('开元')) {
                         winnerIndicator.className = 'w-5 h-5 rounded-full bg-opponent mr-2 piece-shadow';
                         winnerText.textContent = '开元';
@@ -649,10 +660,10 @@
                     
                     if (currentPlayer === 1) {
                         currentPlayerIndicator.className = 'w-5 h-5 rounded-full bg-player border-2 border-gray-300 mr-2 piece-shadow';
-                        currentPlayerText.textContent = '玩家';
+                        currentPlayerText.textContent = '玩家1';
                     } else {
                         currentPlayerIndicator.className = 'w-5 h-5 rounded-full bg-opponent mr-2 piece-shadow';
-                        currentPlayerText.textContent = '开元';
+                        currentPlayerText.textContent = gameMode === 1 ? '开元' : '玩家2';
                     }
                 }
             }
@@ -712,9 +723,18 @@
                 logMessage(`难度已调整为: ${difficultyNames[difficulty - 1]}`);
             }
             
+            // 切换模式
+            function toggleMode() {
+                gameMode = gameMode === 1 ? 2 : 1;
+                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
+                modeText.textContent = modeNames[gameMode - 1];
+                initGame();
+                logMessage(`游戏模式已切换为: ${modeNames[gameMode - 1]}`);
+            }
+            
             // 事件监听
             canvas.addEventListener('click', (e) => {
-                if (gameOver || currentPlayer !== 1) {
+                if (gameOver) {
                     return;
                 }
                 
@@ -743,6 +763,8 @@
             
             difficultyToggle.addEventListener('click', toggleDifficulty);
             
+            modeToggle.addEventListener('click', toggleMode);
+            
             // 窗口大小变化时重绘棋盘
             window.addEventListener('resize', () => {
                 drawBoard();
@@ -754,4 +776,3 @@
     </script>
 </body>
 </html>
-    
