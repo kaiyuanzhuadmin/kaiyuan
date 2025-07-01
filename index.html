@@ -212,7 +212,7 @@
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // 0:空, 1:玩家, 2:开元
             let currentPlayer = 1; // 1:玩家, 2:开元
             let gameOver = false;
-            let difficulty = 2; // 1:简单, 2:中等
+            let difficulty = 2; // 1:简单, 2:中等, 3:困难
             let moveHistory = []; // 记录落子历史
             let lastMovePosition = null; // 记录最后一步的位置
             let gameMode = 1; // 1: 玩家 vs 开元, 2: 玩家 vs 玩家
@@ -481,6 +481,10 @@
                     // 显示开元思考指示器
                     thinkingIndicator.classList.remove('hidden');
                     
+                    // 根据难度设置不同的思考时间
+                    const maxThinkTime = difficulty === 3 ? 5000 : 1000; // 困难难度最多思考5秒，其他难度1秒
+                    const thinkTime = Math.random() * maxThinkTime;
+                    
                     // 开元思考（延迟执行，模拟思考时间）
                     setTimeout(() => {
                         const move = makeMove();
@@ -520,7 +524,7 @@
                             currentPlayer = 1;
                             updateGameStatus();
                         }
-                    }, 500); // 开元思考时间，最多2秒
+                    }, thinkTime);
                 }
             }
             
@@ -555,7 +559,93 @@
                     return bestMove;
                 }
                 
+                // 困难AI：会进行更深入的分析，优先选择能形成更多威胁的位置
+                if (difficulty === 3) {
+                    // 尝试找到最佳位置
+                    let bestMove = findBestMove(2); // 先考虑开元自己的胜利
+                    
+                    if (bestMove.score >= 1000) {
+                        return bestMove;
+                    }
+                    
+                    // 如果没有必胜的位置，尝试阻止玩家
+                    const blockMove = findBestMove(1);
+                    
+                    if (blockMove.score >= 1000) {
+                        return blockMove;
+                    }
+                    
+                    // 评估所有可能的位置，考虑两步之后的情况
+                    let bestScore = -Infinity;
+                    let finalMove = null;
+                    
+                    // 先找到所有可能的候选位置
+                    const candidateMoves = [];
+                    
+                    for (let i = 0; i < BOARD_SIZE; i++) {
+                        for (let j = 0; j < BOARD_SIZE; j++) {
+                            if (gameBoard[i][j] === 0) {
+                                // 检查这个位置周围是否有棋子
+                                if (hasAdjacentPieces(i, j)) {
+                                    candidateMoves.push({x: i, y: j});
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 如果没有候选位置，随机选择一个
+                    if (candidateMoves.length === 0) {
+                        return makeRandomMove();
+                    }
+                    
+                    // 评估每个候选位置
+                    for (const move of candidateMoves) {
+                        // 模拟在这个位置落子
+                        gameBoard[move.x][move.y] = 2;
+                        
+                        // 评估这个位置的分数
+                        let score = evaluatePosition(move.x, move.y, 2);
+                        
+                        // 尝试预测玩家的下一步，并评估威胁
+                        const playerBestResponse = findBestMove(1);
+                        score -= playerBestResponse.score * 0.8; // 玩家的威胁要打折
+                        
+                        // 撤销尝试
+                        gameBoard[move.x][move.y] = 0;
+                        
+                        // 如果分数更高，更新最佳位置
+                        if (score > bestScore) {
+                            bestScore = score;
+                            finalMove = {...move, score};
+                        }
+                    }
+                    
+                    // 如果找到了最佳位置，返回它
+                    if (finalMove) {
+                        return finalMove;
+                    }
+                    
+                    // 否则，使用中等AI的逻辑
+                    if (blockMove.score > bestMove.score) {
+                        return blockMove;
+                    }
+                    
+                    return bestMove;
+                }
+                
                 return makeRandomMove();
+            }
+            
+            // 检查位置周围是否有棋子
+            function hasAdjacentPieces(x, y) {
+                for (let i = Math.max(0, x-2); i <= Math.min(BOARD_SIZE-1, x+2); i++) {
+                    for (let j = Math.max(0, y-2); j <= Math.min(BOARD_SIZE-1, y+2); j++) {
+                        if (gameBoard[i][j] !== 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
             }
             
             // 简单AI：随机选择一个空位
@@ -680,9 +770,20 @@
                         score = 1;      // 眠二
                     }
                     
+                    // 困难难度下，对活三的重视程度更高
+                    if (difficulty === 3 && count === 3 && blocked === 0) {
+                        score = 100;  // 困难难度下活三更有价值
+                    }
+                    
                     if (score > maxScore) {
                         maxScore = score;
                     }
+                }
+                
+                // 困难难度下，对中心位置有额外加成
+                if (difficulty === 3) {
+                    const centerDist = Math.sqrt(Math.pow(x - 7, 2) + Math.pow(y - 7, 2));
+                    maxScore += Math.max(0, 5 - centerDist); // 越靠近中心分数越高
                 }
                 
                 return maxScore;
@@ -767,9 +868,9 @@
             
             // 切换难度
             function toggleDifficulty() {
-                difficulty = (difficulty % 2) + 1; // 只在1(简单)和2(中等)之间切换
+                difficulty = (difficulty % 3) + 1; // 在1(简单)、2(中等)和3(困难)之间循环
                 
-                const difficultyNames = ['简单', '中等'];
+                const difficultyNames = ['简单', '中等', '困难'];
                 difficultyText.textContent = difficultyNames[difficulty - 1];
                 
                 logMessage(`难度已调整为: ${difficultyNames[difficulty - 1]}`);
@@ -847,3 +948,4 @@
     </script>
 </body>
 </html>
+    
