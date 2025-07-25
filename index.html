@@ -7,9 +7,9 @@
     <link rel="icon" type="image/png" sizes="96x96" href="me.png">
     <!-- Tailwind CDN 脚本 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 移除 tailwind.config 定义，直接在CSS中定义颜色变量 -->
+    <!-- 移除 tailwind.config 定义，直接在CSS中定义颜色变量和对应的Tailwind类 -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <style type="text/tailwindcss">
+    <style>
         /* 定义自定义颜色为 CSS 变量 */
         :root {
             --color-primary: #8B5A2B; /* 深棕色 */
@@ -19,8 +19,76 @@
             --color-opponent: #FFFFFF; /* 白棋 */
             --color-player: #000000; /* 黑棋 */
             --color-highlight: #FF69B4; /* 高亮色 */
+
+            /* 常用灰度颜色 */
+            --color-gray-100: #f3f4f6;
+            --color-gray-200: #e5e7eb;
+            --color-gray-300: #d1d5db;
+            --color-gray-400: #9ca3af;
+            --color-gray-500: #6b7280;
+            --color-gray-600: #4b5563;
+            --color-gray-700: #374151;
+            --color-gray-800: #1f2937;
+
+            /* 其他常用颜色 */
+            --color-red-500: #ef4444;
+            --color-red-600: #dc2626;
+            --color-white: #FFFFFF;
+            --color-black: #000000;
+            --color-f0fff0: #f0fff0;
+            --color-f5f5f5: #f5f5f5;
+            --color-f8f8f8: #f8f8f8;
+            --color-fefee0: #fefee0;
+            --color-e0e0b0: #e0e0b0;
+            --color-5a4a3a: #5a4a3a;
+            --color-228B22: #228B22;
+            --color-808080: #808080;
         }
 
+        /* 直接定义 Tailwind 颜色类 */
+        .bg-primary { background-color: var(--color-primary); }
+        .bg-secondary { background-color: var(--color-secondary); }
+        .bg-board { background-color: var(--color-board); }
+        .bg-opponent { background-color: var(--color-opponent); }
+        .bg-player { background-color: var(--color-player); }
+        .bg-gray-200 { background-color: var(--color-gray-200); }
+        .bg-gray-300 { background-color: var(--color-gray-300); }
+        .bg-gray-400 { background-color: var(--color-gray-400); }
+        .bg-gray-500 { background-color: var(--color-gray-500); }
+        .bg-red-500 { background-color: var(--color-red-500); }
+        .bg-red-600 { background-color: var(--color-red-600); }
+        .bg-white { background-color: var(--color-white); }
+        .bg-f0fff0 { background-color: var(--color-f0fff0); }
+        .bg-f5f5f5 { background-color: var(--color-f5f5f5); }
+        .bg-f8f8f8 { background-color: var(--color-f8f8f8); }
+        .bg-fefee0 { background-color: var(--color-fefee0); }
+        
+        /* 透明度背景色 */
+        .bg-white\/80 { background-color: rgba(255, 255, 255, 0.8); }
+        .bg-white\/60 { background-color: rgba(255, 255, 255, 0.6); }
+        .bg-black\/50 { background-color: rgba(0, 0, 0, 0.5); }
+
+        .text-white { color: var(--color-white); }
+        .text-primary { color: var(--color-primary); }
+        /* secondary/90 需要特殊处理，如果不需要精确透明度，可以直接使用 secondary 的颜色 */
+        .text-secondary\/90 { color: var(--color-secondary); opacity: 0.9; } 
+        .text-gray-600 { color: var(--color-gray-600); }
+        .text-gray-700 { color: var(--color-gray-700); }
+        .text-gray-800 { color: var(--color-gray-800); }
+        .text-5a4a3a { color: var(--color-5a4a3a); }
+        
+        /* 边框颜色 */
+        .border-gray-100 { border-color: var(--color-gray-100); }
+        .border-gray-200 { border-color: var(--color-gray-200); }
+        .border-gray-300 { border-color: var(--color-gray-300); }
+        .border-primary { border-color: var(--color-primary); }
+        .border-e0e0b0 { border-color: var(--color-e0e0b0); }
+
+        /* 其他直接颜色定义 */
+        .winner h3 { color: var(--color-228B22); } /* 森林绿 */
+        .loser h3 { color: var(--color-808080); } /* 灰色 */
+
+        /* 原始的 Tailwind 样式层 */
         @layer utilities {
             .board-shadow { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
             .piece-shadow { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
@@ -77,10 +145,10 @@
                 overflow: hidden; /* 确保动画在面板内 */
             }
             .result-panel.winner {
-                background-color: #f0fff0; /* 淡绿色背景 */
+                background-color: var(--color-f0fff0); /* 淡绿色背景 */
             }
             .result-panel.loser {
-                background-color: #f5f5f5; /* 淡灰色背景 */
+                background-color: var(--color-f5f5f5); /* 淡灰色背景 */
             }
             .result-panel h3 {
                 font-size: 1.8rem;
@@ -90,14 +158,12 @@
             .result-panel p {
                 font-size: 1.2rem;
             }
-            .winner h3 { color: #228B22; } /* 森林绿 */
-            .loser h3 { color: #808080; } /* 灰色 */
 
             /* 模态框按钮 */
             .modal-buttons {
                 padding: 20px;
-                background-color: #fff;
-                border-top: 1px solid #eee;
+                background-color: var(--color-white);
+                border-top: 1px solid var(--color-gray-200); /* 使用灰度变量 */
                 display: flex;
                 justify-content: center;
                 gap: 15px;
@@ -116,7 +182,7 @@
                 position: absolute;
                 width: 10px;
                 height: 10px;
-                background-color: #f00;
+                background-color: #f00; /* 保持为固定颜色，因为是动画效果 */
                 opacity: 0;
                 animation: confetti-fall 3s ease-out forwards;
             }
@@ -136,7 +202,7 @@
             }
             .cloud {
                 position: absolute;
-                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC4xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMy4yIDQySDEuM2M0LjQtMTMuMSAxNy4zLTIyLjQgMzEuNS0yMi40IDEzLjEgMCAyNC41IDguMyAzMC4xIDIwLjJoMTIuN2MyLjkgMCA1LjYtMS4zIDcuNC0zLjQgMS4yLTEuNCAxLjgtMy4xIDEuOC00Ljd6Ii8+PC9zdmc+');
+                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC4xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMyuMiA0MmhxMS4zYzQuNC0xMy4xIDE3LjMtMjIuNCAzMS41LTIyLjQgMTMuMSAwIDI0LjUgOC4zIDMwLjEgMjAuMmwxMi43YzIuOSAwIDUuNi0xLjMgNy40LTMuNCAxLjItMS40IDEuOC0zLjEgMS44LTQuN3oiLz48L3N2Z24+');
                 background-repeat: no-repeat;
                 background-size: contain;
                 width: 120px;
@@ -182,12 +248,12 @@
             .game-log-container {
                 max-height: 200px; /* Limit height for scrollability */
                 overflow-y: auto; /* Enable vertical scrolling */
-                background-color: #fefee0; /* Light yellow background */
-                border: 1px solid #e0e0b0; /* Matching border */
+                background-color: var(--color-fefee0); /* Light yellow background */
+                border: 1px solid var(--color-e0e0b0); /* Matching border */
                 border-radius: 8px;
                 padding: 1rem;
                 font-size: 0.9rem;
-                color: #5a4a3a;
+                color: var(--color-5a4a3a);
                 margin-top: 1.5rem; /* Space from the board */
             }
             .game-log-container p {
@@ -287,7 +353,7 @@
                 </div>
             </div>
              <div id="result-container-draw" class="result-panel-container" style="display: none;">
-                <div class="result-panel" style="width:100%; background-color: #f8f8f8;">
+                <div class="result-panel" style="width:100%; background-color: var(--color-f8f8f8);">
                     <h3>平局</h3>
                     <p>棋逢对手，再战一局！</p>
                 </div>
@@ -300,6 +366,7 @@
     </div>
 
     <audio id="music" src="jasmine_flower.mp3" loop></audio>
+
     <footer class="mt-8 text-center text-gray-600 text-sm">
         <p>五子棋游戏 &copy; 2025 | Designed by 开元 </p>
     </footer>
