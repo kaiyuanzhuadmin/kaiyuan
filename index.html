@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
     <link rel="icon" type="image/png" sizes="96x96" href="me.png">
+    <!-- Tailwind CDN 脚本 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 移除 tailwind.config 定义，直接在CSS中定义颜色变量和对应的Tailwind类 -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.70/css/font-awesome.min.css" rel="stylesheet">
@@ -598,7 +599,7 @@
                 const playerName = (gameMode === 1) ? (currentPlayer === humanPlayer ? '玩家' : '开元') : (currentPlayer === (isFirstPlayerBlack ? 1 : 2) ? '玩家 1' : '玩家 2');
                 logMessage(`${playerName} (${playerColor}) 落子于 (${x}, ${y})`);
 
-                if (checkWin(x, y, currentPlayer)) {
+                if (checkWin(x, y, currentPlayer, gameBoard)) { // Pass gameBoard
                     endGame(currentPlayer);
                     return;
                 }
@@ -647,7 +648,7 @@
                         const playerColor = aiPlayer === 1 ? '黑棋' : '白棋';
                         logMessage(`开元 (${playerColor}) 落子于 (${move.x}, ${move.y})`);
 
-                        if (checkWin(move.x, move.y, aiPlayer)) {
+                        if (checkWin(move.x, move.y, aiPlayer, gameBoard)) { // Pass gameBoard
                             endGame(aiPlayer);
                             return;
                         }
@@ -667,7 +668,7 @@
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (board[i][j] === 0) {
                             board[i][j] = player;
-                            if (checkWin(i, j, player)) {
+                            if (checkWin(i, j, player, board)) { // Pass board
                                 board[i][j] = 0;
                                 return { x: i, y: j };
                             }
@@ -720,12 +721,12 @@
             }
 
             function minimax(board, depth, alpha, beta, isMaximizing) {
-                let winner = getWinner(board);
+                let winner = getWinner(board); 
                 if (winner !== 0) {
                     return (winner === aiPlayer ? patterns.FIVE : -patterns.FIVE) * (depth + 1);
                 }
-                if (depth === 0 || isBoardFull(board)) {
-                    return evaluateBoard(board);
+                if (depth === 0 || isBoardFull(board)) { 
+                    return evaluateBoard(board); 
                 }
 
                 const player = isMaximizing ? aiPlayer : humanPlayer;
@@ -756,40 +757,40 @@
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (board[i][j] === 0) {
-                           aiScore += evaluatePosition(i, j, aiPlayer, board);
-                           humanScore += evaluatePosition(i, j, humanPlayer, board);
+                           aiScore += evaluatePosition(i, j, aiPlayer, board); // Pass board
+                           humanScore += evaluatePosition(i, j, humanPlayer, board); // Pass board
                         }
                     }
                 }
                 return aiScore - humanScore * 1.5;
             }
 
-            function evaluatePosition(x, y, player, board) {
+            function evaluatePosition(x, y, player, boardToEvaluate) { // Added boardToEvaluate
                 let score = 0;
                 const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
                 for (const [dx, dy] of directions) {
-                    score += getLineScore(x, y, dx, dy, player, board);
+                    score += getLineScore(x, y, dx, dy, player, boardToEvaluate); // Pass boardToEvaluate
                 }
                 return score;
             }
 
-            function getLineScore(x, y, dx, dy, player, board) {
+            function getLineScore(x, y, dx, dy, player, boardToScan) { // Added boardToScan
                 let count = 0;
                 let openEnds = 0;
                 const opponent = player === 1 ? 2 : 1;
 
                 for (let i = 1; i < 5; i++) {
                     const nx = x + i * dx, ny = y + i * dy;
-                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || board[nx][ny] === opponent) break;
-                    if (board[nx][ny] === 0) { openEnds++; break; }
-                    if (board[nx][ny] === player) count++;
+                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || boardToScan[nx][ny] === opponent) break;
+                    if (boardToScan[nx][ny] === 0) { openEnds++; break; }
+                    if (boardToScan[nx][ny] === player) count++;
                 }
 
                 for (let i = 1; i < 5; i++) {
                     const nx = x - i * dx, ny = y - i * dy;
-                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || board[nx][ny] === opponent) break;
-                    if (board[nx][ny] === 0) { openEnds++; break; }
-                    if (board[nx][ny] === player) count++;
+                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || boardToScan[nx][ny] === opponent) break;
+                    if (boardToScan[nx][ny] === 0) { openEnds++; break; }
+                    if (boardToScan[nx][ny] === player) count++;
                 }
 
                 if (count >= 4) return patterns.FIVE;
@@ -844,17 +845,17 @@
                 return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : null;
             }
 
-            function checkWin(x, y, player) {
+            function checkWin(x, y, player, board) { // Added board parameter
                 const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
                 for (const [dx, dy] of directions) {
                     let count = 1;
                     for (let i = 1; i < 5; i++) {
                         const nx = x + i * dx, ny = y + i * dy;
-                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && gameBoard[nx][ny] === player) count++; else break;
+                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] === player) count++; else break; // Use board
                     }
                     for (let i = 1; i < 5; i++) {
                         const nx = x - i * dx, ny = y - i * dy;
-                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && gameBoard[nx][ny] === player) count++; else break;
+                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] === player) count++; else break; // Use board
                     }
                     if (count >= 5) return true;
                 }
@@ -864,7 +865,7 @@
             function getWinner(board) {
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (board[i][j] !== 0 && checkWin(i, j, board[i][j])) return board[i][j];
+                        if (board[i][j] !== 0 && checkWin(i, j, board[i][j], board)) return board[i][j]; // Pass board
                     }
                 }
                 return 0;
@@ -1105,12 +1106,15 @@
                 }
             });
 
+            // 将初始游戏启动移到 window.onload
+            window.addEventListener('load', () => {
+                updateDifficultyUI();
+                updateModeUI();
+                startGame();
+            });
+            // 移除 DOMContentLoaded 中的 startGame() 调用
+            // document.addEventListener('DOMContentLoaded', () => { ... });
             window.addEventListener('resize', setCanvasSize);
-            
-            // Initial game start
-            updateDifficultyUI();
-            updateModeUI();
-            startGame();
         });
     </script>
 </body>
