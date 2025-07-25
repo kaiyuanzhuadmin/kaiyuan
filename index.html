@@ -5,30 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
     <link rel="icon" type="image/png" sizes="96x96" href="me.png">
-    <!-- 将 Tailwind CDN 脚本放在 tailwind.config 定义之前 -->
+    <!-- Tailwind CDN 脚本 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#8B5A2B', // 深棕色
-                        secondary: '#D2B48C', // 浅棕色
-                        accent: '#FF69B4', // 亮粉色
-                        board: '#DEB887', // 棋盘色
-                        opponent: '#FFFFFF', // 白棋
-                        player: '#000000', // 黑棋
-                        highlight: '#FF69B4' // 高亮色
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
+    <!-- 移除 tailwind.config 定义，直接在CSS中定义颜色变量 -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style type="text/tailwindcss">
+        /* 定义自定义颜色为 CSS 变量 */
+        :root {
+            --color-primary: #8B5A2B; /* 深棕色 */
+            --color-secondary: #D2B48C; /* 浅棕色 */
+            --color-accent: #FF69B4; /* 亮粉色 */
+            --color-board: #DEB887; /* 棋盘色 */
+            --color-opponent: #FFFFFF; /* 白棋 */
+            --color-player: #000000; /* 黑棋 */
+            --color-highlight: #FF69B4; /* 高亮色 */
+        }
+
         @layer utilities {
             .board-shadow { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
             .piece-shadow { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
@@ -144,7 +136,7 @@
             }
             .cloud {
                 position: absolute;
-                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC4xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMyuMiA0MmhxMS4zYzQuNC0xMy4xIDE3LjMtMjIuNCAzMS41LTIyLjQgMTMuMSAwIDI0LjUgOC4zIDMwLjEgMjAuMmwxMi43YzIuOSAwIDUuNi0xLjMgNy40LTMuNCAxLjItMS40IDEuOC0zLjEgMS44LTQuN3oiLz48L3N2Zz4=');
+                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC4xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMy4yIDQySDEuM2M0LjQtMTMuMSAxNy4zLTIyLjQgMzEuNS0yMi40IDEzLjEgMCAyNC41IDguMyAzMC4xIDIwLjJoMTIuN2MyLjkgMCA1LjYtMS4zIDcuNC0zLjQgMS4yLTEuNCAxLjgtMy4xIDEuOC00Ljd6Ii8+PC9zdmc+');
                 background-repeat: no-repeat;
                 background-size: contain;
                 width: 120px;
@@ -308,13 +300,24 @@
     </div>
 
     <audio id="music" src="jasmine_flower.mp3" loop></audio>
-
     <footer class="mt-8 text-center text-gray-600 text-sm">
         <p>五子棋游戏 &copy; 2025 | Designed by 开元 </p>
     </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // 获取计算样式以访问 CSS 变量
+            const computedStyle = getComputedStyle(document.documentElement);
+            const colors = {
+                primary: computedStyle.getPropertyValue('--color-primary').trim(),
+                secondary: computedStyle.getPropertyValue('--color-secondary').trim(),
+                accent: computedStyle.getPropertyValue('--color-accent').trim(),
+                board: computedStyle.getPropertyValue('--color-board').trim(),
+                opponent: computedStyle.getPropertyValue('--color-opponent').trim(),
+                player: computedStyle.getPropertyValue('--color-player').trim(),
+                highlight: computedStyle.getPropertyValue('--color-highlight').trim(),
+            };
+
             // Game Constants
             const BOARD_SIZE = 15;
             const PIECE_SIZE_RATIO = 0.8;
@@ -434,9 +437,9 @@
             function drawBoard() {
                 const size = canvas.width;
                 ctx.clearRect(0, 0, size, size);
-                ctx.fillStyle = tailwind.config.theme.extend.colors.board;
+                ctx.fillStyle = colors.board; // 使用 CSS 变量
                 ctx.fillRect(0, 0, size, size);
-                ctx.strokeStyle = tailwind.config.theme.extend.colors.primary;
+                ctx.strokeStyle = colors.primary; // 使用 CSS 变量
                 ctx.lineWidth = 1;
 
                 for (let i = 0; i < BOARD_SIZE; i++) {
@@ -471,7 +474,7 @@
                 const centerY = actualBoardPadding + y * actualCellSize;
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
-                ctx.fillStyle = tailwind.config.theme.extend.colors.primary;
+                ctx.fillStyle = colors.primary; // 使用 CSS 变量
                 ctx.fill();
             }
 
@@ -504,7 +507,7 @@
                 const centerY = actualBoardPadding + y * actualCellSize;
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, actualPieceSize / 4, 0, 2 * Math.PI);
-                ctx.fillStyle = tailwind.config.theme.extend.colors.accent;
+                ctx.fillStyle = colors.accent; // 使用 CSS 变量
                 ctx.fill();
             }
 
