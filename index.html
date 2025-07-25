@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
     <link rel="icon" type="image/png" sizes="96x96" href="me.png">
-    <!-- Tailwind CDN 脚本 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 移除 tailwind.config 定义，直接在CSS中定义颜色变量和对应的Tailwind类 -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.70/css/font-awesome.min.css" rel="stylesheet">
     <style>
         /* 定义自定义颜色为 CSS 变量 */
         :root {
@@ -100,7 +99,7 @@
 
             /* 模态框样式 */
             .modal {
-                display: none;
+                display: none; /* 修正：默认隐藏模态框 */
                 position: fixed;
                 z-index: 1000;
                 left: 0;
@@ -111,7 +110,6 @@
                 background-color: rgba(0, 0, 0, 0.6);
                 backdrop-filter: blur(5px);
                 -webkit-backdrop-filter: blur(5px);
-                display: flex;
                 align-items: center;
                 justify-content: center;
             }
@@ -202,7 +200,7 @@
             }
             .cloud {
                 position: absolute;
-                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC4xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMyuMiA0MmhxMS4zYzQuNC0xMy4xIDE3LjMtMjIuNCAzMS41LTIyLjQgMTMuMSAwIDI0LjUgOC4zIDMwLjEgMjAuMmwxMi43YzIuOSAwIDUuNi0xLjMgNy40LTMuNCAxLjItMS40IDEuOC0zLjEgMS44LTQuN3oiLz48L3N2Z24+');
+                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC.xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMy.yIDQySDEuM2M0LjQtMTMuMSAxNy4zLTIyLjQgMzEuNS0yMi40IDEzLjEgMCAyNC41IDguMyAzMC4xIDIwLjJoMTIuN2MyLjkgMCA1LjYtMS4zIDcuNC0zLjQgMS4yLTEuNCAxLjgtMy4xIDEuOC00Ljd6Ii8+PC9zdmc+');
                 background-repeat: no-repeat;
                 background-size: contain;
                 width: 120px;
@@ -431,6 +429,7 @@
             let moveHistory;
             let lastMovePosition;
             let actualCellSize, actualPieceSize, actualBoardPadding;
+            let hoverX = -1, hoverY = -1; // New: Mouse hover coordinates
 
             // Game Settings
             let gameMode = 1; // 1: Player vs AI, 2: Player vs Player
@@ -474,7 +473,7 @@
                 moveHistory = [];
                 lastMovePosition = null;
                 boardOverlay.style.display = 'none';
-                winnerModal.style.display = 'none';
+                winnerModal.style.display = 'none'; // 确保模态框在重置时隐藏
                 currentPlayer = 1; // Black always starts
                 gameLog.innerHTML = ''; // Clear game log on new game
                 logMessage("游戏开始！");
@@ -533,6 +532,13 @@
 
                 if (lastMovePosition) {
                     drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
+                }
+
+                // Draw hover piece if applicable
+                if (hoverX !== -1 && hoverY !== -1 && gameBoard[hoverX][hoverY] === 0 && !gameOver && (gameMode === 2 || currentPlayer === humanPlayer)) {
+                    ctx.globalAlpha = 0.5; // Set transparency for ghost piece
+                    drawPiece(hoverX, hoverY, currentPlayer === 1 ? 'black' : 'white');
+                    ctx.globalAlpha = 1.0; // Reset transparency
                 }
             }
             
@@ -611,8 +617,26 @@
             
             function aiTurn() {
                 thinkingIndicator.classList.remove('hidden');
+                logMessage("开元正在思考...");
+
+                console.time("AI Thinking Time"); // 在AI计算前启动计时器
+
+                // AI 计算落子位置
+                const move = makeAiMove();
+
+                console.timeEnd("AI Thinking Time"); // 在AI计算后结束计时器
+
+                // 根据难度设置人工延迟，模拟思考过程
+                let artificialDelay = 500; // 基础延迟
+                if (difficulty === 2) {
+                    artificialDelay = 1000; // 一般模式，稍长
+                } else if (difficulty === 3) {
+                    // 困难模式的延迟可以根据实际计算时间进行调整，以达到平均10秒
+                    // 这里仍然保持一个基础延迟，实际思考时间由 makeAiMove 的计算决定
+                    artificialDelay = 2000; 
+                }
+
                 setTimeout(() => {
-                    const move = makeAiMove();
                     thinkingIndicator.classList.add('hidden');
                     if (move) {
                         gameBoard[move.x][move.y] = aiPlayer;
@@ -635,7 +659,7 @@
                         currentPlayer = humanPlayer;
                         updateGameStatus();
                     }
-                }, 500 + Math.random() * 500);
+                }, artificialDelay + Math.random() * 500); // 添加一个小的随机分量
             }
             
             function findWinningMove(player, board) {
@@ -661,19 +685,32 @@
                 let blockingMove = findWinningMove(humanPlayer, gameBoard);
                 if (blockingMove) return blockingMove;
 
-                if (difficulty === 1) return makeRandomMove();
-                
-                const searchDepth = difficulty === 2 ? 2 : 4;
+                // 根据难度和游戏进程动态确定搜索深度
+                let currentSearchDepth;
+                const movesMade = moveHistory.length;
+
+                if (difficulty === 1) { // 简单模式
+                    currentSearchDepth = 1; 
+                } else if (difficulty === 2) { // 一般模式
+                    currentSearchDepth = (movesMade < 4) ? 2 : 3; 
+                } else { // 困难模式 (difficulty === 3)
+                    // 避免采用四层深度，最大深度为 3
+                    currentSearchDepth = (movesMade < 6) ? 2 : 3; 
+                }
+
                 let bestScore = -Infinity;
                 let bestMove = null;
                 
+                // 获取排序后的候选移动，优先考虑中心区域和有棋子附近的点
                 const candidateMoves = getSortedCandidateMoves(gameBoard);
 
                 for (const move of candidateMoves) {
                     const { x, y } = move;
                     gameBoard[x][y] = aiPlayer;
-                    let score = minimax(gameBoard, searchDepth - 1, -Infinity, Infinity, false);
-                    gameBoard[x][y] = 0;
+                    // Minimax 递归调用，使用动态确定的搜索深度
+                    let score = minimax(gameBoard, currentSearchDepth - 1, -Infinity, Infinity, false);
+                    gameBoard[x][y] = 0; // 撤销棋子
+
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove = { x, y };
@@ -777,8 +814,10 @@
                     }
                 }
                 if (moves.length === 0) {
-                    return [{x: 7, y: 7}];
+                    // 如果没有相邻棋子的空位，则返回中心点作为唯一候选，防止AI无处落子
+                    return [{x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2)}];
                 }
+                // 可以根据启发式进一步排序 moves，例如靠近中心或现有棋子的位置
                 return moves;
             }
 
@@ -901,7 +940,7 @@
                     showConfetti(winnerPanel.querySelector('.confetti-container'));
                     showClouds(loserPanel.querySelector('.clouds-container'));
                 }
-                winnerModal.style.display = 'flex';
+                winnerModal.style.display = 'flex'; // 显示模态框
             }
 
             function showConfetti(container) {
@@ -930,13 +969,52 @@
                 const clickY = event.clientY - rect.top;
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
+                
+                // 计算棋盘坐标，并四舍五入到最近的整数格点
                 const x = Math.round((clickX * scaleX - actualBoardPadding) / actualCellSize);
                 const y = Math.round((clickY * scaleY - actualBoardPadding) / actualCellSize);
 
+                // 确保点击在有效棋盘范围内
                 if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
                     handlePlayerMove(x, y);
                 }
             });
+
+            // New: Mousemove event for hover effect
+            canvas.addEventListener('mousemove', (event) => {
+                if (gameOver || (gameMode === 1 && currentPlayer === aiPlayer)) {
+                    hoverX = -1; // Reset hover if game is over or AI's turn
+                    hoverY = -1;
+                    drawBoard(); // Redraw to clear ghost piece
+                    return;
+                }
+
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                const newHoverX = Math.round((mouseX * scaleX - actualBoardPadding) / actualCellSize);
+                const newHoverY = Math.round((mouseY * scaleY - actualBoardPadding) / actualCellSize);
+
+                // Check if hover position changed and is valid
+                if (newHoverX !== hoverX || newHoverY !== hoverY) {
+                    hoverX = newHoverX;
+                    hoverY = newHoverY;
+                    drawBoard(); // Redraw to show or update ghost piece
+                }
+            });
+
+            // New: Mouseout event to clear hover effect
+            canvas.addEventListener('mouseout', () => {
+                if (hoverX !== -1 || hoverY !== -1) {
+                    hoverX = -1;
+                    hoverY = -1;
+                    drawBoard(); // Redraw to clear ghost piece
+                }
+            });
+
 
             function startNewRound() {
                 isFirstPlayerBlack = !isFirstPlayerBlack;
