@@ -475,7 +475,7 @@
                             🔄 新游戏
                         </button>
                         <button id="undo" class="btn btn-secondary">
-                            ↩️ 悔棋 (<span id="undo-chances">0</span>)
+                            ↶ 悔棋 (<span id="undo-chances">0</span>)
                         </button>
                         <button id="difficulty-toggle" class="btn btn-secondary">
                             ⚡ 难度: <span id="difficulty-text">中等</span>
@@ -640,19 +640,19 @@
 
             // AI difficulty configuration
             const difficultyConfig = {
-                1: { // Easy
-                    searchDepth: 3,
-                    randomMoveChance: 0.1,
-                    thinkTimeRange: [200, 2000]
+                1: { // Easy 简单
+                    searchDepth: 3, // 搜索深度：AI向前看2步
+                    randomMoveChance: 0.1, // 随机落子概率：40%几率随机落子，降低难度
+                    thinkTimeRange: [200, 1000] // 思考时间范围（毫秒）
                 },
-                2: { // Medium
-                    searchDepth: 4,
-                    randomMoveChance: 0.0,
-                    thinkTimeRange: [600, 4000]
+                2: { // Medium 中等
+                    searchDepth: 4, // 搜索深度：AI向前看5步 (原为4，增加以提升封堵能力)
+                    randomMoveChance: 0.0, // 随机落子概率：10%几率随机落子
+                    thinkTimeRange: [600, 3500]
                 },
-                3: { // Hard
-                    searchDepth: 5,
-                    randomMoveChance: 0.0,
+                3: { // Hard 困难
+                    searchDepth: 4, // 搜索深度：AI向前看6步 (原为5，增加以提升封堵能力，计算量会更大)
+                    randomMoveChance: 0.0, // 随机落子概率：0%，总是选择最佳策略
                     thinkTimeRange: [800, 5500]
                 }
             };
@@ -712,17 +712,17 @@
                 logMessage(`第${gameCount}局开始`);
                 
                 if (IS_MOBILE) {
-                    // Mobile: Initial zoom to 8x8 area centered
+                    // 移动端：开局时自动缩放到8x8区域并居中
                     const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                     const targetVisibleCells = INITIAL_MOBILE_VISIBLE_CELLS; 
                     const targetInternalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
 
-                    // Calculate scale to fit targetVisibleCells into container width
+                    // 计算缩放比例，使目标可见区域填满容器宽度
                     scale = (boardContainer.clientWidth / initialScaleFactor) / targetInternalWidth;
-                    // Clamp initial scale, ensuring it doesn't zoom out too much or zoom in too little
+                    // 钳制初始缩放比例，确保不会过小或过大
                     scale = Math.max(1.0, Math.min(scale, 3.0)); 
                     
-                    // Center the entire board (which will center the 8x8 view due to the scale)
+                    // 计算平移量以将棋盘的中心区域居中显示
                     const currentDisplayWidth = INTERNAL_CANVAS_WIDTH * scale * initialScaleFactor;
                     const currentDisplayHeight = INTERNAL_CANVAS_HEIGHT * scale * initialScaleFactor;
 
@@ -731,7 +731,7 @@
                     clampPan();
                     applyTransform();
                 } else {
-                    // Desktop: Ensure full board is visible and centered
+                    // 桌面端：确保整个棋盘可见并居中
                     scale = 1.0;
                     translateX = 0;
                     translateY = 0;
@@ -1356,20 +1356,21 @@
                 }
                 
                 // Add bonuses for combinations of threats (AlphaGo-like compound threats)
+                // 提高复合威胁的分数，让AI更积极地封堵
                 if (liveFourCount >= 1) { // If there's a live four, it's very strong
                     totalPatternScore += 10000000; // Major bonus, almost a win (increased significantly)
                 }
-                if (liveThreeCount >= 2) { // Double live three
-                    totalPatternScore += 800000; // Very strong threat (increased)
+                if (liveThreeCount >= 2) { // Double live three (双活三)
+                    totalPatternScore += 850000; // Very strong threat (从80万增加到85万)
                 }
-                if (liveThreeCount >= 1 && blockedFourCount >= 1) { // Live three plus a blocked four
-                    totalPatternScore += 700000; // Strong threat (increased)
+                if (liveThreeCount >= 1 && blockedFourCount >= 1) { // Live three plus a blocked four (活三冲四)
+                    totalPatternScore += 750000; // Strong threat (从70万增加到75万)
                 }
-                if (blockedFourCount >= 2) { // Double blocked four
-                    totalPatternScore += 600000; // Significant threat (increased)
+                if (blockedFourCount >= 2) { // Double blocked four (双冲四)
+                    totalPatternScore += 650000; // Significant threat (从60万增加到65万)
                 }
-                if (sleepFourCount >= 1 && liveThreeCount >= 1) { // Sleep four plus live three
-                    totalPatternScore += 400000; // (increased)
+                if (sleepFourCount >= 1 && liveThreeCount >= 1) { // Sleep four plus live three (眠四活三)
+                    totalPatternScore += 450000; // (从40万增加到45万)
                 }
                 
                 // Positional bonus (center area is more valuable)
