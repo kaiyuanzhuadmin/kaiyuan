@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%238B5A2B'><circle cx='50' cy='50' r='40' fill='white' stroke='%238B5A2B' stroke-width='4'/><circle cx='50' cy='50' r='10' fill='%238B5A2B'/></svg>" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="96x96" href="me.png">
     <style>
         /* 本地化样式，替代Tailwind CSS */
         * {
@@ -20,8 +20,16 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 1rem;
+            justify-content: flex-start;
+            padding: 0.5rem;
+            margin: 0;
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                justify-content: center;
+                padding: 1rem;
+            }
         }
         
         .container {
@@ -29,20 +37,36 @@
             width: 100%;
             margin: 0 auto;
             background: white;
-            border-radius: 0.75rem;
+            border-radius: 0.5rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             overflow: hidden;
+            min-height: calc(100vh - 1rem);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        @media (min-width: 768px) {
+            .container {
+                border-radius: 0.75rem;
+                min-height: auto;
+            }
         }
         
         .header {
             background: #8B5A2B;
             color: white;
-            padding: 2rem;
+            padding: 1rem;
             text-align: center;
         }
         
+        @media (min-width: 768px) {
+            .header {
+                padding: 2rem;
+            }
+        }
+        
         .header h1 {
-            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
             font-weight: bold;
             letter-spacing: 0.025em;
             margin-bottom: 0.5rem;
@@ -50,46 +74,79 @@
         
         .header p {
             color: #D2B48C;
-            font-size: clamp(1rem, 2vw, 1.2rem);
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
         }
         
         .main {
-            padding: 2rem;
+            padding: 1rem;
             display: flex;
-            gap: 2rem;
-            flex-wrap: wrap;
+            gap: 1rem;
+            flex-direction: column;
+        }
+        
+        @media (min-width: 768px) {
+            .main {
+                padding: 2rem;
+                flex-direction: row;
+                gap: 2rem;
+            }
         }
         
         .sidebar {
-            flex: 1;
-            min-width: 280px;
+            width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar {
+                flex: 1;
+                min-width: 280px;
+                gap: 1.5rem;
+            }
         }
         
         .board-area {
-            flex: 2;
-            min-width: 400px;
+            width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
+        }
+        
+        @media (min-width: 768px) {
+            .board-area {
+                flex: 2;
+            }
         }
         
         .info-card {
             background: #f9fafb;
-            padding: 1.25rem;
+            padding: 1rem;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         
+        @media (min-width: 768px) {
+            .info-card {
+                padding: 1.25rem;
+            }
+        }
+        
         .info-card h2 {
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             font-weight: bold;
             color: #374151;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
+        }
+        
+        @media (min-width: 768px) {
+            .info-card h2 {
+                font-size: 1.25rem;
+                margin-bottom: 1rem;
+            }
         }
         
         .icon {
@@ -180,11 +237,25 @@
             border-radius: 0.5rem;
             overflow: hidden;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 100vw;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 480px) {
+            .board-container {
+                margin: 0 -1rem;
+                border-radius: 0;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
         }
         
         #board {
             background: #DEB887;
             display: block;
+            width: 100%;
+            height: auto;
+            max-width: 100%;
         }
         
         .thinking-overlay {
@@ -236,20 +307,36 @@
             padding: 1rem;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-top: 1.5rem;
+            margin-top: 1rem;
+            width: 100%;
+        }
+        
+        @media (min-width: 768px) {
+            .game-log {
+                margin-top: 1.5rem;
+            }
         }
         
         .game-log h3 {
             font-weight: bold;
             color: #374151;
             margin-bottom: 0.5rem;
+            font-size: 1rem;
         }
         
         .log-content {
-            height: 8rem;
+            height: 6rem;
             overflow-y: auto;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             color: #374151;
+            line-height: 1.4;
+        }
+        
+        @media (min-width: 768px) {
+            .log-content {
+                height: 8rem;
+                font-size: 0.875rem;
+            }
         }
         
         .log-content p {
@@ -447,16 +534,37 @@
 
     <!-- 添加音频元素 -->
     <audio id="music" loop>
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D2um0fCEOfyvi2ayEhDz2m4vOwYxwCL3y5zNmUVhIM" type="audio/wav">
+        <source src="jasmine_flower.mp3" type="audio/wav">
     </audio>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // 游戏常量
             const BOARD_SIZE = 15;
-            const CELL_SIZE = 40;
-            const PIECE_SIZE = CELL_SIZE * 0.8;
-            const BOARD_PADDING = CELL_SIZE;
+            let CELL_SIZE = 40; // 动态调整
+            let PIECE_SIZE = CELL_SIZE * 0.8;
+            let BOARD_PADDING = CELL_SIZE;
+            
+            // 计算响应式尺寸
+            function calculateResponsiveSize() {
+                const container = document.querySelector('.board-area');
+                const containerWidth = container.clientWidth;
+                const maxWidth = Math.min(containerWidth - 32, window.innerWidth - 32); // 留出边距
+                
+                // 根据屏幕大小调整单元格尺寸
+                if (maxWidth < 400) {
+                    CELL_SIZE = Math.floor(maxWidth / (BOARD_SIZE + 1)); // 小屏幕
+                } else if (maxWidth < 600) {
+                    CELL_SIZE = Math.floor(maxWidth / (BOARD_SIZE + 0.5)); // 中等屏幕
+                } else {
+                    CELL_SIZE = Math.min(40, Math.floor(maxWidth / BOARD_SIZE)); // 大屏幕
+                }
+                
+                // 确保最小尺寸
+                CELL_SIZE = Math.max(20, CELL_SIZE);
+                PIECE_SIZE = CELL_SIZE * 0.8;
+                BOARD_PADDING = CELL_SIZE;
+            }
             
             // 游戏状态
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -520,11 +628,22 @@
 
             // 设置Canvas尺寸
             function setCanvasSize() {
+                calculateResponsiveSize();
                 const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
+                
+                // 设置canvas的实际尺寸
                 canvas.width = size;
                 canvas.height = size;
-                canvas.style.width = `${size}px`;
-                canvas.style.height = `${size}px`;
+                
+                // 设置canvas的显示尺寸
+                const containerWidth = document.querySelector('.board-area').clientWidth;
+                const displaySize = Math.min(size, containerWidth - 32);
+                
+                canvas.style.width = `${displaySize}px`;
+                canvas.style.height = `${displaySize}px`;
+                
+                // 存储缩放比例，用于处理点击事件
+                canvas.dataset.scale = displaySize / size;
             }
             
             // 初始化游戏
@@ -1227,12 +1346,47 @@
             // 处理棋盘点击事件
             canvas.addEventListener('click', (event) => {
                 const rect = canvas.getBoundingClientRect();
-                const x = Math.round((event.clientX - rect.left - BOARD_PADDING) / CELL_SIZE);
-                const y = Math.round((event.clientY - rect.top - BOARD_PADDING) / CELL_SIZE);
+                const scale = parseFloat(canvas.dataset.scale) || 1;
+                
+                // 考虑缩放比例计算实际坐标
+                const rawX = (event.clientX - rect.left) / scale;
+                const rawY = (event.clientY - rect.top) / scale;
+                
+                const x = Math.round((rawX - BOARD_PADDING) / CELL_SIZE);
+                const y = Math.round((rawY - BOARD_PADDING) / CELL_SIZE);
                 
                 if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
                     handlePlayerMove(x, y);
                 }
+            });
+            
+            // 添加触摸事件支持
+            canvas.addEventListener('touchstart', (event) => {
+                event.preventDefault(); // 防止页面滚动
+                
+                const touch = event.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const scale = parseFloat(canvas.dataset.scale) || 1;
+                
+                const rawX = (touch.clientX - rect.left) / scale;
+                const rawY = (touch.clientY - rect.top) / scale;
+                
+                const x = Math.round((rawX - BOARD_PADDING) / CELL_SIZE);
+                const y = Math.round((rawY - BOARD_PADDING) / CELL_SIZE);
+                
+                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                    handlePlayerMove(x, y);
+                }
+            }, { passive: false });
+            
+            // 窗口大小改变时重新调整棋盘
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    setCanvasSize();
+                    drawBoard();
+                }, 150);
             });
             
             // 新游戏按钮事件
