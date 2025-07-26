@@ -647,11 +647,11 @@
                 },
                 2: { // Medium 中等
                     searchDepth: 4, // 搜索深度：AI向前看5步 (原为4，增加以提升封堵能力)
-                    randomMoveChance: 0.0, // 随机落子概率：10%几率随机落子
+                    randomMoveChance: -0.1, // 随机落子概率：10%几率随机落子
                     thinkTimeRange: [600, 3500]
                 },
                 3: { // Hard 困难
-                    searchDepth: 4, // 搜索深度：AI向前看6步 (原为5，增加以提升封堵能力，计算量会更大)
+                    searchDepth: 5, // 搜索深度：AI向前看6步 (原为5，增加以提升封堵能力，计算量会更大)
                     randomMoveChance: 0.0, // 随机落子概率：0%，总是选择最佳策略
                     thinkTimeRange: [800, 5500]
                 }
