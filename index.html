@@ -560,37 +560,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Game constants
             const BOARD_SIZE = 15;
-            let CELL_SIZE = 40; // Dynamic adjustment
-            let PIECE_SIZE = CELL_SIZE * 0.8;
-            let BOARD_PADDING = CELL_SIZE;
+            // Define internal drawing sizes for crispness
+            const INTERNAL_DRAWING_CELL_SIZE = 50; // Internal pixel size for each cell
+            const INTERNAL_DRAWING_PIECE_SIZE = INTERNAL_DRAWING_CELL_SIZE * 0.85;
+            const INTERNAL_DRAWING_BOARD_PADDING = INTERNAL_DRAWING_CELL_SIZE;
             
-            // Calculate responsive size
-            function calculateResponsiveSize() {
-                const container = document.querySelector('.board-area');
-                const containerWidth = container.clientWidth;
-                
-                // Calculate available space, considering margins and padding
-                // Subtracting fixed padding/margin to get a more accurate available width
-                const availableWidth = Math.min(containerWidth - 16, window.innerWidth - 32);
-                
-                // Calculate the most suitable cell size based on available space
-                // Target a slightly larger cell size for mobile to improve touch accuracy and visibility
-                let idealCellSize;
-                if (window.innerWidth < 480) { // Very small screens (e.g., older phones)
-                    idealCellSize = Math.floor(availableWidth / (BOARD_SIZE + 0.5)); // Allow slightly less padding
-                    CELL_SIZE = Math.max(20, Math.min(28, idealCellSize)); // Increased min size
-                } else if (window.innerWidth < 768) { // Tablets or larger phones
-                    idealCellSize = Math.floor(availableWidth / (BOARD_SIZE + 0.8));
-                    CELL_SIZE = Math.max(25, Math.min(35, idealCellSize)); // Increased min size
-                } else { // Desktop
-                    idealCellSize = Math.floor(availableWidth / (BOARD_SIZE + 1));
-                    CELL_SIZE = Math.max(30, Math.min(45, idealCellSize)); // Increased max size for desktop
-                }
-                
-                PIECE_SIZE = CELL_SIZE * 0.85; // Slightly larger pieces for better visual
-                BOARD_PADDING = CELL_SIZE; // Keep padding proportional to cell size
-            }
-            
+            // Calculate the fixed internal canvas dimensions
+            const INTERNAL_CANVAS_WIDTH = (BOARD_SIZE - 1) * INTERNAL_DRAWING_CELL_SIZE + INTERNAL_DRAWING_BOARD_PADDING * 2;
+            const INTERNAL_CANVAS_HEIGHT = INTERNAL_CANVAS_WIDTH; // Board is square
+
             // Game state
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
             let currentPlayer = 1; // 1: Black, 2: White
@@ -616,9 +594,9 @@
             const winnerText = document.getElementById('winnerText');
             const newGameBtn = document.getElementById('new-game');
             const undoBtn = document.getElementById('undo');
-            const undoChancesDisplay = document.getElementById('undo-chances'); // New
+            const undoChancesDisplay = document.getElementById('undo-chances');
             const difficultyToggle = document.getElementById('difficulty-toggle');
-            const difficultyText = document.getElementById('difficulty-text'); // Corrected ID
+            const difficultyText = document.getElementById('difficulty-text');
             const gameLog = document.getElementById('game-log');
             const thinkingIndicator = document.getElementById('thinking');
             const modeToggle = document.getElementById('mode-toggle');
@@ -630,7 +608,7 @@
             const music = document.getElementById('music');
             const musicToggle = document.getElementById('music-toggle');
             const musicText = document.getElementById('music-text');
-            const redeemCodeInput = document.getElementById('redeem-code-input'); // New
+            const redeemCodeInput = document.getElementById('redeem-code-input');
 
             // AI difficulty configuration
             const difficultyConfig = {
@@ -664,31 +642,28 @@
             let initialPinchMidY = 0; // Midpoint Y at the start of pinch gesture
             let isGestureActive = false; // Flag to indicate if a zoom/pan gesture is active
             let gestureTimeout = null; // Timeout for resetting isGestureActive
-            let initialTouchX = 0; // New: For tap detection
-            let initialTouchY = 0; // New: For tap detection
-            const tapThreshold = 10; // New: Max distance for a touch to be considered a tap (in pixels)
+            let initialTouchX = 0; // For tap detection
+            let initialTouchY = 0; // For tap detection
+            const tapThreshold = 10; // Max distance for a touch to be considered a tap (in pixels)
 
-            // Set Canvas size
-            function setCanvasSize() {
-                calculateResponsiveSize();
-                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
+            // Set Canvas internal drawing size once
+            canvas.width = INTERNAL_CANVAS_WIDTH;
+            canvas.height = INTERNAL_CANVAS_HEIGHT;
+
+            // Calculate responsive display size for the canvas element
+            function calculateResponsiveDisplaySize() {
+                const container = document.querySelector('.board-area');
+                const containerWidth = container.clientWidth;
                 
-                // Get available container width
-                const containerWidth = document.querySelector('.board-area').clientWidth;
-                const maxDisplaySize = Math.min(containerWidth - 16, window.innerWidth - 32); // Leave appropriate margins
-                
-                // Set actual canvas size (internal drawing resolution)
-                canvas.width = size;
-                canvas.height = size;
+                // Calculate available space, considering margins and padding
+                const maxDisplaySize = Math.min(containerWidth - 16, window.innerWidth - 32);
                 
                 // Set canvas display size (CSS size)
-                // When not zoomed, canvas display size matches container, and zoom/pan are handled by CSS transform
                 canvas.style.width = `${maxDisplaySize}px`;
                 canvas.style.height = `${maxDisplaySize}px`;
                 
-                // Store initial scale for click event handling (before any user zoom)
-                // This is the ratio of displayed CSS width to internal canvas width
-                canvas.dataset.initialScale = maxDisplaySize / size;
+                // Store initial scale for click event handling (ratio of CSS display size to internal drawing size)
+                canvas.dataset.initialScale = maxDisplaySize / INTERNAL_CANVAS_WIDTH;
                 
                 // Ensure correct container size
                 boardContainer.style.width = `${maxDisplaySize}px`;
@@ -708,13 +683,12 @@
             
             // Initialize game
             function initGame() {
-                setCanvasSize();
+                calculateResponsiveDisplaySize(); // Set responsive display size
                 gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // Clear board
                 currentPlayer = 1; // Always black starts
                 gameOver = false;
                 moveHistory = [];
                 lastMovePosition = null;
-                // undoChances = 0; // Do not reset undo chances on new game start
                 
                 updateGameStatus();
                 clearGameLog();
@@ -739,35 +713,34 @@
             
             // Draw board
             function drawBoard() {
-                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
-                ctx.clearRect(0, 0, size, size);
+                ctx.clearRect(0, 0, INTERNAL_CANVAS_WIDTH, INTERNAL_CANVAS_HEIGHT);
                 
                 // Draw board background with a subtle wood texture effect
-                const boardGradient = ctx.createLinearGradient(0, 0, size, size);
+                const boardGradient = ctx.createLinearGradient(0, 0, INTERNAL_CANVAS_WIDTH, INTERNAL_CANVAS_HEIGHT);
                 boardGradient.addColorStop(0, '#DEB887'); // Light wood
                 boardGradient.addColorStop(1, '#C19A6B'); // Darker wood
                 ctx.fillStyle = boardGradient;
-                ctx.fillRect(0, 0, size, size);
+                ctx.fillRect(0, 0, INTERNAL_CANVAS_WIDTH, INTERNAL_CANVAS_HEIGHT);
                 
-                // Draw grid lines with a slightly darker, more defined color
+                // Draw grid lines
                 ctx.strokeStyle = '#8B4513'; // Darker brown for lines
                 ctx.lineWidth = 1.5; // Slightly thicker lines for better visibility
                 
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     // Horizontal lines
                     ctx.beginPath();
-                    ctx.moveTo(BOARD_PADDING, BOARD_PADDING + i * CELL_SIZE);
-                    ctx.lineTo(size - BOARD_PADDING, BOARD_PADDING + i * CELL_SIZE);
+                    ctx.moveTo(INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
+                    ctx.lineTo(INTERNAL_CANVAS_WIDTH - INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
                     ctx.stroke();
                     
                     // Vertical lines
                     ctx.beginPath();
-                    ctx.moveTo(BOARD_PADDING + i * CELL_SIZE, BOARD_PADDING);
-                    ctx.lineTo(BOARD_PADDING + i * CELL_SIZE, size - BOARD_PADDING);
+                    ctx.moveTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, INTERNAL_DRAWING_BOARD_PADDING);
+                    ctx.lineTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, INTERNAL_CANVAS_HEIGHT - INTERNAL_DRAWING_BOARD_PADDING);
                     ctx.stroke();
                 }
                 
-                // Draw star points with a slight shadow for depth
+                // Draw star points
                 const starPoints = [
                     {x: 3, y: 3}, {x: 3, y: 11}, 
                     {x: 7, y: 7}, // Center point
@@ -797,8 +770,8 @@
             
             // Draw star point with improved aesthetics
             function drawStarPoint(x, y) {
-                const centerX = BOARD_PADDING + x * CELL_SIZE;
-                const centerY = BOARD_PADDING + y * CELL_SIZE;
+                const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
+                const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const radius = 4;
                 
                 // Draw a subtle shadow
@@ -816,9 +789,9 @@
             
             // Draw piece with enhanced aesthetics and optional scale for animation
             function drawPiece(x, y, color, pieceScale = 1) {
-                const centerX = BOARD_PADDING + x * CELL_SIZE;
-                const centerY = BOARD_PADDING + y * CELL_SIZE;
-                const currentPieceSize = PIECE_SIZE * pieceScale;
+                const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
+                const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
+                const currentPieceSize = INTERNAL_DRAWING_PIECE_SIZE * pieceScale;
 
                 // Draw subtle shadow for depth
                 ctx.beginPath();
@@ -886,9 +859,9 @@
             
             // Draw marker for the last move with a more distinct look
             function drawLastMoveMarker(x, y) {
-                const centerX = BOARD_PADDING + x * CELL_SIZE;
-                const centerY = BOARD_PADDING + y * CELL_SIZE;
-                const radius = PIECE_SIZE / 4;
+                const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
+                const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
+                const radius = INTERNAL_DRAWING_PIECE_SIZE / 4;
                 
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
@@ -1521,12 +1494,12 @@
                 winnerModal.style.display = 'block';
             }
 
-            // New: Update undo chances display
+            // Update undo chances display
             function updateUndoChancesDisplay() {
                 undoChancesDisplay.textContent = undoChances;
             }
 
-            // New: Handle redeem code submission
+            // Handle redeem code submission
             function handleRedeemCode() {
                 const code = redeemCodeInput.value.trim().toLowerCase();
                 if (code === 'kaiyuan') {
@@ -1575,39 +1548,24 @@
 
             // Function to clamp pan values within board boundaries
             function clampPan() {
-                const boardWidth = canvas.width; // Internal canvas width
-                const boardHeight = canvas.height; // Internal canvas height
+                const currentDisplayWidth = INTERNAL_CANVAS_WIDTH * scale * parseFloat(canvas.dataset.initialScale);
+                const currentDisplayHeight = INTERNAL_CANVAS_HEIGHT * scale * parseFloat(canvas.dataset.initialScale);
                 const containerWidth = boardContainer.clientWidth;
                 const containerHeight = boardContainer.clientHeight;
 
-                // Calculate current scaled board dimensions
-                const scaledBoardWidth = boardWidth * scale * parseFloat(canvas.dataset.initialScale);
-                const scaledBoardHeight = boardHeight * scale * parseFloat(canvas.dataset.initialScale);
-
-                // Max translation values (board edge aligns with container edge)
-                // Note: The board is centered if it's smaller than the container.
-                // So, the max/min pan depends on whether the scaled board is larger or smaller than the container.
-                let minXBound = 0;
+                let minXBound = containerWidth - currentDisplayWidth;
                 let maxXBound = 0;
-                let minYBound = 0;
+                let minYBound = containerHeight - currentDisplayHeight;
                 let maxYBound = 0;
 
-                if (scaledBoardWidth > containerWidth) {
-                    maxXBound = 0;
-                    minXBound = containerWidth - scaledBoardWidth;
-                } else {
-                    // If scaled board is smaller than container, center it
-                    translateX = (containerWidth - scaledBoardWidth) / 2;
+                // If the scaled board is smaller than the container, center it
+                if (currentDisplayWidth < containerWidth) {
+                    translateX = (containerWidth - currentDisplayWidth) / 2;
                     minXBound = translateX;
                     maxXBound = translateX;
                 }
-
-                if (scaledBoardHeight > containerHeight) {
-                    maxYBound = 0;
-                    minYBound = containerHeight - scaledBoardHeight;
-                } else {
-                    // If scaled board is smaller than container, center it
-                    translateY = (containerHeight - scaledBoardHeight) / 2;
+                if (currentDisplayHeight < containerHeight) {
+                    translateY = (containerHeight - currentDisplayHeight) / 2;
                     minYBound = translateY;
                     maxYBound = translateY;
                 }
@@ -1617,10 +1575,8 @@
             }
 
             canvas.addEventListener('touchstart', (event) => {
-                // Prevent default touch behavior (like scrolling)
                 event.preventDefault(); 
 
-                // Set gesture active flag
                 isGestureActive = true;
                 if (gestureTimeout) {
                     clearTimeout(gestureTimeout);
@@ -1640,16 +1596,15 @@
                     initialPinchDistance = getDistance(event.touches[0], event.touches[1]);
                     initialPinchScale = scale;
                     
-                    // Calculate midpoint relative to canvas for zoom origin
+                    // Calculate midpoint relative to the *transformed* canvas for zoom origin
                     const rect = canvas.getBoundingClientRect();
                     const midpoint = getMidpoint(event.touches[0], event.touches[1]);
                     
-                    // Calculate pinchMidX/Y relative to the *original* (untransformed) canvas coordinate system
-                    // This is the point on the internal canvas that should remain under the finger midpoint
-                    initialPinchMidX = (midpoint.x - rect.left - translateX) / (scale * parseFloat(canvas.dataset.initialScale));
-                    initialPinchMidY = (midpoint.y - rect.top - translateY) / (scale * parseFloat(canvas.dataset.initialScale));
+                    // Calculate pinchMidX/Y relative to the *internal* canvas coordinate system
+                    initialPinchMidX = (midpoint.x - rect.left) / (scale * parseFloat(canvas.dataset.initialScale));
+                    initialPinchMidY = (midpoint.y - rect.top) / (scale * parseFloat(canvas.dataset.initialScale));
                 }
-            }, { passive: false }); // Use passive: false to allow preventDefault
+            }, { passive: false });
 
             canvas.addEventListener('touchmove', (event) => {
                 event.preventDefault(); // Prevent default touch behavior
@@ -1681,6 +1636,7 @@
 
                     // Adjust translateX and translateY based on the new scale and pinch origin
                     // The formula is: current_midpoint_on_screen - (initial_midpoint_on_internal_canvas * new_total_scale)
+                    // We need to reverse the initial scale factor as well
                     translateX = currentMidpoint.x - rect.left - (initialPinchMidX * newScale * parseFloat(canvas.dataset.initialScale));
                     translateY = currentMidpoint.y - rect.top - (initialPinchMidY * newScale * parseFloat(canvas.dataset.initialScale));
 
@@ -1708,27 +1664,18 @@
                         const rect = canvas.getBoundingClientRect();
                         const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                         
-                        // Get tap coordinates relative to the canvas *display* area
+                        // Get tap coordinates relative to the canvas element's transformed display area
                         const clientX = releasedTouch.clientX;
                         const clientY = releasedTouch.clientY;
 
-                        // Step 1: Get coordinates relative to the canvas element's CSS display box (after transform)
-                        const clickXOnDisplay = clientX - rect.left;
-                        const clickYOnDisplay = clientY - rect.top;
+                        // Calculate coordinates on the internal canvas drawing surface
+                        // This accounts for the current CSS transform (scale and translate)
+                        const internalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
+                        const internalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
 
-                        // Step 2: Reverse the CSS transform (translate and scale) to get coordinates on the
-                        // canvas element's *initial* scaled display size (before user zoom/pan)
-                        const transformedX = (clickXOnDisplay - translateX) / scale;
-                        const transformedY = (clickYOnDisplay - translateY) / scale;
-
-                        // Step 3: Reverse the initial responsive scaling to get coordinates on the
-                        // internal canvas drawing resolution (where BOARD_PADDING and CELL_SIZE apply)
-                        const internalCanvasX = transformedX / initialScaleFactor;
-                        const internalCanvasY = transformedY / initialScaleFactor;
-
-                        // Step 4: Map to board grid coordinates
-                        const x = Math.round((internalCanvasX - BOARD_PADDING) / CELL_SIZE);
-                        const y = Math.round((internalCanvasY - BOARD_PADDING) / CELL_SIZE);
+                        // Map to board grid coordinates
+                        const x = Math.round((internalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        const y = Math.round((internalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
                         
                         if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
                             handlePlayerMove(x, y);
@@ -1749,15 +1696,7 @@
                 }
             });
 
-            // Removed the original canvas.addEventListener('click', ...)
-            // Mouse clicks on desktop will still work because touchstart/touchend won't fire.
-            // For a unified approach, you could also convert mouse clicks to use this tap logic,
-            // but for now, the browser's default click behavior for mouse is usually fine.
             canvas.addEventListener('mousedown', (event) => {
-                // For desktop mouse clicks, we can still use the click event or simulate tap
-                // For simplicity, we'll let the browser handle mouse clicks as before,
-                // as the touch logic is primarily for mobile.
-                // If you want to unify, you'd add similar logic here to track mouse down/up.
                 isGestureActive = true; // Block immediate clicks while mouse is down
                 lastPanX = event.clientX;
                 lastPanY = event.clientY;
@@ -1775,17 +1714,16 @@
                     const rect = canvas.getBoundingClientRect();
                     const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                     
-                    const clickXOnDisplay = event.clientX - rect.left;
-                    const clickYOnDisplay = event.clientY - rect.top;
+                    const clientX = event.clientX;
+                    const clientY = event.clientY;
 
-                    const transformedX = (clickXOnDisplay - translateX) / scale;
-                    const transformedY = (clickYOnDisplay - translateY) / scale;
+                    // Calculate coordinates on the internal canvas drawing surface
+                    // This accounts for the current CSS transform (scale and translate)
+                    const internalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
+                    const internalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
 
-                    const internalCanvasX = transformedX / initialScaleFactor;
-                    const internalCanvasY = transformedY / initialScaleFactor;
-
-                    const x = Math.round((internalCanvasX - BOARD_PADDING) / CELL_SIZE);
-                    const y = Math.round((internalCanvasY - BOARD_PADDING) / CELL_SIZE);
+                    const x = Math.round((internalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                    const y = Math.round((internalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
                     
                     if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
                         handlePlayerMove(x, y);
@@ -1821,8 +1759,8 @@
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
-                    setCanvasSize();
-                    drawBoard();
+                    calculateResponsiveDisplaySize(); // Only update CSS display size
+                    drawBoard(); // Redraw board to ensure it's crisp
                 }, 150);
             });
             
@@ -1916,7 +1854,7 @@
                 }
             });
 
-            // New: Redeem code input event listeners
+            // Redeem code input event listeners
             redeemCodeInput.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
                     handleRedeemCode();
