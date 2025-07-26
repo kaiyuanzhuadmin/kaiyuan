@@ -641,19 +641,19 @@
             // AI difficulty configuration
             const difficultyConfig = {
                 1: { // Easy 简单
-                    searchDepth: 3, // 搜索深度：AI向前看2步
-                    randomMoveChance: 0.1, // 随机落子概率：40%几率随机落子，降低难度
-                    thinkTimeRange: [200, 1000] // 思考时间范围（毫秒）
+                    searchDepth: 3, // Search depth: AI looks 3 steps ahead
+                    randomMoveChance: 0.1, // Chance of random move: 10% chance of random move, reducing difficulty
+                    thinkTimeRange: [200, 1000] // Thinking time range (milliseconds)
                 },
                 2: { // Medium 中等
-                    searchDepth: 4, // 搜索深度：AI向前看5步 (原为4，增加以提升封堵能力)
-                    randomMoveChance: -0.0, // 随机落子概率：10%几率随机落子
-                    thinkTimeRange: [800, 3500]
+                    searchDepth: 4, // Search depth: AI looks 4 steps ahead (adjusted for performance)
+                    randomMoveChance: 0.0, // Chance of random move: 0% chance of random move
+                    thinkTimeRange: [800, 3500] // Adjusted thinking time range
                 },
                 3: { // Hard 困难
-                    searchDepth: 5, // 搜索深度：AI向前看6步 (原为5，增加以提升封堵能力，计算量会更大)
-                    randomMoveChance: -0.0, // 随机落子概率：0%，总是选择最佳策略
-                    thinkTimeRange: [1000, 5500]
+                    searchDepth: 5, // Search depth: AI looks 5 steps ahead (adjusted for performance)
+                    randomMoveChance: 0.0, // Chance of random move: 0%, always chooses the best strategy
+                    thinkTimeRange: [1000, 5500] // Adjusted thinking time range
                 }
             };
 
@@ -712,17 +712,17 @@
                 logMessage(`第${gameCount}局开始`);
                 
                 if (IS_MOBILE) {
-                    // 移动端：开局时自动缩放到8x8区域并居中
+                    // Mobile: Automatically zoom to 8x8 area and center at the start of the game
                     const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                     const targetVisibleCells = INITIAL_MOBILE_VISIBLE_CELLS; 
                     const targetInternalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
 
-                    // 计算缩放比例，使目标可见区域填满容器宽度
+                    // Calculate zoom ratio to fit the target visible area into the container width
                     scale = (boardContainer.clientWidth / initialScaleFactor) / targetInternalWidth;
-                    // 钳制初始缩放比例，确保不会过小或过大
+                    // Clamp initial zoom ratio to ensure it's not too small or too large
                     scale = Math.max(1.0, Math.min(scale, 3.0)); 
                     
-                    // 计算平移量以将棋盘的中心区域居中显示
+                    // Calculate translation to center the board's central area
                     const currentDisplayWidth = INTERNAL_CANVAS_WIDTH * scale * initialScaleFactor;
                     const currentDisplayHeight = INTERNAL_CANVAS_HEIGHT * scale * initialScaleFactor;
 
@@ -731,7 +731,7 @@
                     clampPan();
                     applyTransform();
                 } else {
-                    // 桌面端：确保整个棋盘可见并居中
+                    // Desktop: Ensure the entire board is visible and centered
                     scale = 1.0;
                     translateX = 0;
                     translateY = 0;
@@ -1356,21 +1356,21 @@
                 }
                 
                 // Add bonuses for combinations of threats (AlphaGo-like compound threats)
-                // 提高复合威胁的分数，让AI更积极地封堵
+                // Increase scores for composite threats to make AI more proactive in blocking
                 if (liveFourCount >= 1) { // If there's a live four, it's very strong
                     totalPatternScore += 10000000; // Major bonus, almost a win (increased significantly)
                 }
                 if (liveThreeCount >= 2) { // Double live three (双活三)
-                    totalPatternScore += 850000; // Very strong threat (从80万增加到85万)
+                    totalPatternScore += 850000; // Very strong threat (increased from 800,000 to 850,000)
                 }
                 if (liveThreeCount >= 1 && blockedFourCount >= 1) { // Live three plus a blocked four (活三冲四)
-                    totalPatternScore += 750000; // Strong threat (从70万增加到75万)
+                    totalPatternScore += 750000; // Strong threat (increased from 700,000 to 750,000)
                 }
                 if (blockedFourCount >= 2) { // Double blocked four (双冲四)
-                    totalPatternScore += 650000; // Significant threat (从60万增加到65万)
+                    totalPatternScore += 650000; // Significant threat (increased from 600,000 to 650,000)
                 }
                 if (sleepFourCount >= 1 && liveThreeCount >= 1) { // Sleep four plus live three (眠四活三)
-                    totalPatternScore += 450000; // (从40万增加到45万)
+                    totalPatternScore += 450000; // (increased from 400,000 to 450,000)
                 }
                 
                 // Positional bonus (center area is more valuable)
@@ -1951,6 +1951,8 @@
                     return;
                 }
                 
+                // In Player vs AI mode, undo 2 moves (player's and AI's)
+                // In Player vs Player mode, undo 1 move
                 const undoCount = gameMode === 1 ? Math.min(2, moveHistory.length) : 1;
                 
                 if (gameMode === 1) {
@@ -1961,12 +1963,13 @@
                     if (moveHistory.length > 0) {
                         const lastMove = moveHistory.pop();
                         gameBoard[lastMove.x][lastMove.y] = 0;
-                        currentPlayer = lastMove.player;
+                        // Set current player back to the player who made the move that was just undone
+                        currentPlayer = lastMove.player; 
                     }
                 }
                 
                 lastMovePosition = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
-                gameOver = false;
+                gameOver = false; // Crucial: Reset gameOver state to allow further moves
                 drawBoard();
                 updateGameStatus();
                 updateUndoChancesDisplay();
@@ -1976,10 +1979,11 @@
                     updateDynamicZoom(); // Adjust zoom after undo
                 }
 
+                // If in Player vs AI mode and it's AI's turn after undo, make AI move
                 if (gameMode === 1) {
                     const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
                                      (!playerStartsWithBlack && currentPlayer === 1);
-                    if (isAiTurn) {
+                    if (isAiTurn && !gameOver) { // Ensure game is not over before AI moves
                         aiMove();
                     }
                 }
@@ -2030,6 +2034,7 @@
 
             redeemCodeInput.addEventListener('input', () => {
                 const value = redeemCodeInput.value.trim();
+                // Check for 7 alphanumeric characters (including Chinese characters)
                 if (value.length === 7 && /^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(value)) {
                     handleRedeemCode();
                 }
