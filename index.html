@@ -4,1117 +4,1030 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
-    <link rel="icon" type="image/png" sizes="96x96" href="me.png">
-    <!-- Tailwind CDN 脚本 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 移除 tailwind.config 定义，直接在CSS中定义颜色变量和对应的Tailwind类 -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.70/css/font-awesome.min.css" rel="stylesheet">
-    <style>
-        /* 定义自定义颜色为 CSS 变量 */
-        :root {
-            --color-primary: #8B5A2B; /* 深棕色 */
-            --color-secondary: #D2B48C; /* 浅棕色 */
-            --color-accent: #FF69B4; /* 亮粉色 */
-            --color-board: #DEB887; /* 棋盘色 */
-            --color-opponent: #FFFFFF; /* 白棋 */
-            --color-player: #000000; /* 黑棋 */
-            --color-highlight: #FF69B4; /* 高亮色 */
-
-            /* 常用灰度颜色 */
-            --color-gray-100: #f3f4f6;
-            --color-gray-200: #e5e7eb;
-            --color-gray-300: #d1d5db;
-            --color-gray-400: #9ca3af;
-            --color-gray-500: #6b7280;
-            --color-gray-600: #4b5563;
-            --color-gray-700: #374151;
-            --color-gray-800: #1f2937;
-
-            /* 其他常用颜色 */
-            --color-red-500: #ef4444;
-            --color-red-600: #dc2626;
-            --color-white: #FFFFFF;
-            --color-black: #000000;
-            --color-f0fff0: #f0fff0;
-            --color-f5f5f5: #f5f5f5;
-            --color-f8f8f8: #f8f8f8;
-            --color-fefee0: #fefee0;
-            --color-e0e0b0: #e0e0b0;
-            --color-5a4a3a: #5a4a3a;
-            --color-228B22: #228B22;
-            --color-808080: #808080;
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%238B5A2B'><circle cx='50' cy='50' r='40' fill='white' stroke='%238B5A2B' stroke-width='4'/><circle cx='50' cy='50' r='10' fill='%238B5A2B'/></svg>" type="image/svg+xml">
+    <script src="style.css"></script>
+    <!-- Removed Font Awesome CDN as per request to reduce external links -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8B5A2B',
+                        secondary: '#D2B48C',
+                        accent: '#FF69B4',
+                        board: '#DEB887',
+                        opponent: '#FFFFFF',
+                        player: '#000000',
+                        highlight: '#FF69B4'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
         }
-
-        /* 直接定义 Tailwind 颜色类 */
-        .bg-primary { background-color: var(--color-primary); }
-        .bg-secondary { background-color: var(--color-secondary); }
-        .bg-board { background-color: var(--color-board); }
-        .bg-opponent { background-color: var(--color-opponent); }
-        .bg-player { background-color: var(--color-player); }
-        .bg-gray-200 { background-color: var(--color-gray-200); }
-        .bg-gray-300 { background-color: var(--color-gray-300); }
-        .bg-gray-400 { background-color: var(--color-gray-400); }
-        .bg-gray-500 { background-color: var(--color-gray-500); }
-        .bg-red-500 { background-color: var(--color-red-500); }
-        .bg-red-600 { background-color: var(--color-red-600); }
-        .bg-white { background-color: var(--color-white); }
-        .bg-f0fff0 { background-color: var(--color-f0fff0); }
-        .bg-f5f5f5 { background-color: var(--color-f5f5f5); }
-        .bg-f8f8f8 { background-color: var(--color-f8f8f8); }
-        .bg-fefee0 { background-color: var(--color-fefee0); }
-        
-        /* 透明度背景色 */
-        .bg-white\/80 { background-color: rgba(255, 255, 255, 0.8); }
-        .bg-white\/60 { background-color: rgba(255, 255, 255, 0.6); }
-        .bg-black\/50 { background-color: rgba(0, 0, 0, 0.5); }
-
-        .text-white { color: var(--color-white); }
-        .text-primary { color: var(--color-primary); }
-        /* secondary/90 需要特殊处理，如果不需要精确透明度，可以直接使用 secondary 的颜色 */
-        .text-secondary\/90 { color: var(--color-secondary); opacity: 0.9; } 
-        .text-gray-600 { color: var(--color-gray-600); }
-        .text-gray-700 { color: var(--color-gray-700); }
-        .text-gray-800 { color: var(--color-gray-800); }
-        .text-5a4a3a { color: var(--color-5a4a3a); }
-        
-        /* 边框颜色 */
-        .border-gray-100 { border-color: var(--color-gray-100); }
-        .border-gray-200 { border-color: var(--color-gray-200); }
-        .border-gray-300 { border-color: var(--color-gray-300); }
-        .border-primary { border-color: var(--color-primary); }
-        .border-e0e0b0 { border-color: var(--color-e0e0b0); }
-
-        /* 其他直接颜色定义 */
-        .winner h3 { color: var(--color-228B22); } /* 森林绿 */
-        .loser h3 { color: var(--color-808080); } /* 灰色 */
-
-        /* 原始的 Tailwind 样式层 */
+    </script>
+    <style type="text/tailwindcss">
         @layer utilities {
-            .board-shadow { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
-            .piece-shadow { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
-            .thinking-indicator { animation: thinking 1.5s infinite; }
+            .content-auto {
+                content-visibility: auto;
+            }
+            .board-shadow {
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            }
+            .piece-shadow {
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .thinking-indicator {
+                animation: thinking 1.5s infinite;
+            }
             @keyframes thinking {
                 0%, 100% { opacity: 0.3; }
                 50% { opacity: 1; }
             }
-
             /* 模态框样式 */
             .modal {
-                display: none; /* 修正：默认隐藏模态框 */
+                display: none;
                 position: fixed;
-                z-index: 1000;
+                z-index: 1;
                 left: 0;
                 top: 0;
                 width: 100%;
                 height: 100%;
                 overflow: auto;
-                background-color: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
-                align-items: center;
-                justify-content: center;
+                background-color: rgba(0, 0, 0, 0.4);
             }
             .modal-content {
                 background-color: #fefefe;
-                padding: 0; /* 移除内边距，由内部面板控制 */
-                border: none;
-                width: 90%;
-                max-width: 600px; /* 增大宽度以容纳两个面板 */
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-                position: relative;
-                animation: fadeInScale 0.3s ease-out;
-                overflow: hidden; /* 隐藏溢出的动画 */
-            }
-            @keyframes fadeInScale {
-                from { opacity: 0; transform: scale(0.9); }
-                to { opacity: 1; transform: scale(1); }
-            }
-            
-            /* 胜负结果面板 */
-            .result-panel-container {
-                display: flex;
-                width: 100%;
-            }
-            .result-panel {
-                width: 50%;
-                padding: 40px 20px;
-                position: relative;
-                overflow: hidden; /* 确保动画在面板内 */
-            }
-            .result-panel.winner {
-                background-color: var(--color-f0fff0); /* 淡绿色背景 */
-            }
-            .result-panel.loser {
-                background-color: var(--color-f5f5f5); /* 淡灰色背景 */
-            }
-            .result-panel h3 {
-                font-size: 1.8rem;
-                font-weight: bold;
-                margin-bottom: 10px;
-            }
-            .result-panel p {
-                font-size: 1.2rem;
-            }
-
-            /* 模态框按钮 */
-            .modal-buttons {
+                margin: 15% auto;
                 padding: 20px;
-                background-color: var(--color-white);
-                border-top: 1px solid var(--color-gray-200); /* 使用灰度变量 */
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-            }
-
-            /* 胜利彩色碎片动画 */
-            .confetti-container {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-            }
-            .confetti {
-                position: absolute;
-                width: 10px;
-                height: 10px;
-                background-color: #f00; /* 保持为固定颜色，因为是动画效果 */
-                opacity: 0;
-                animation: confetti-fall 3s ease-out forwards;
-            }
-            @keyframes confetti-fall {
-                0% { transform: translateY(-100%) rotateZ(0deg); opacity: 1; }
-                100% { transform: translateY(150%) rotateZ(720deg); opacity: 0; }
-            }
-
-            /* 失败乌云动画 */
-            .clouds-container {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-            }
-            .cloud {
-                position: absolute;
-                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGZpbGw9IiM5RTlFOUUiIGQ9Ik05NC40IDQyLjRjLTMuOC0xNS4xLTE3LjgtMjYtMzQuMi0yNi0xMC4zIDAtMTkuNSA0LjYtMjUuOSAxMS45QzMwLjYgMjQuMyAyMy43IDIyIDE2IDIyIDcuMiAyMiAwIDI5LjIgMCAzOC.xYzAgMS4zIDAuMiAyLjUgMC40IDMuN0M2LjYgNDIgMTMuMiA0MiAxMy.yIDQySDEuM2M0LjQtMTMuMSAxNy4zLTIyLjQgMzEuNS0yMi40IDEzLjEgMCAyNC41IDguMyAzMC4xIDIwLjJoMTIuN2MyLjkgMCA1LjYtMS4zIDcuNC0zLjQgMS4yLTEuNCAxLjgtMy4xIDEuOC00Ljd6Ii8+PC9zdmc+');
-                background-repeat: no-repeat;
-                background-size: contain;
-                width: 120px;
-                height: 72px;
-                opacity: 0;
-                animation: cloud-drift 10s linear forwards;
-            }
-            @keyframes cloud-drift {
-                0% { transform: translateX(-100%); opacity: 0; }
-                10% { opacity: 0.7; }
-                90% { opacity: 0.7; }
-                100% { transform: translateX(150%); opacity: 0; }
-            }
-
-            /* 棋盘遮罩 */
-            #board-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(128, 128, 128, 0.5);
-                z-index: 10;
-                display: none; /* 默认隐藏 */
-                border-radius: 0.5rem; /* 保持和棋盘容器一致的圆角 */
-            }
-
-            /* 响应式棋盘容器 */
-            #board-container {
-                width: 100%;
-                padding-top: 100%;
-                position: relative;
-            }
-            #board {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-            }
-
-            /* 游戏日志样式 */
-            .game-log-container {
-                max-height: 200px; /* Limit height for scrollability */
-                overflow-y: auto; /* Enable vertical scrolling */
-                background-color: var(--color-fefee0); /* Light yellow background */
-                border: 1px solid var(--color-e0e0b0); /* Matching border */
+                border: 1px solid #888;
+                width: 300px;
                 border-radius: 8px;
-                padding: 1rem;
-                font-size: 0.9rem;
-                color: var(--color-5a4a3a);
-                margin-top: 1.5rem; /* Space from the board */
+                text-align: center;
             }
-            .game-log-container p {
-                margin-bottom: 0.3rem;
-                line-height: 1.4;
+            .close {
+                color: #aaa;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
             }
-            .game-log-container p:last-child {
-                margin-bottom: 0;
+            .close:hover,
+            .close:focus {
+                color: black;
+                text-decoration: none;
+                cursor: pointer;
             }
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4 font-sans text-gray-800 bg-secondary">
-    <div class="max-w-5xl w-full mx-auto rounded-xl shadow-2xl overflow-hidden border border-gray-100 bg-white/60 backdrop-blur-sm">
-        <header class="bg-primary text-white p-6 md:p-8 text-center rounded-t-xl">
-            <h1 class="text-[clamp(2rem,6vw,3rem)] font-extrabold tracking-wide drop-shadow-md">五子棋对弈</h1>
-            <p class="mt-2 text-secondary/90 text-[clamp(1rem,2.5vw,1.3rem)] font-light">与人工智能“开元”一决高下</p>
+<body class="bg-gradient-to-br from-amber-50 to-orange-100 min-h-screen flex flex-col items-center justify-center p-4 font-sans">
+    <div class="max-w-4xl w-full mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
+        <!-- 游戏标题 -->
+        <header class="bg-primary text-white p-6 text-center">
+            <h1 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold tracking-wide">五子棋对弈</h1>
+            <p class="mt-2 text-secondary/90 text-[clamp(1rem,2vw,1.2rem)]">来场挑战，看谁能先连成五子/•᷅•᷄\୭~   </p>
         </header>
 
-        <main class="p-6 md:p-10 flex flex-col md:flex-row gap-8">
+        <!-- 游戏区域 -->
+        <main class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
             <!-- 游戏信息和控制区 -->
-            <div class="w-full md:w-1/3 flex flex-col gap-6">
-                <div class="bg-white/80 p-5 rounded-lg shadow-lg border border-gray-200">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa fa-info-circle text-primary mr-3 text-2xl"></i>游戏信息</h2>
-                    <div class="space-y-4 text-base">
+            <div class="w-full md:w-1/4 flex flex-col gap-6">
+                <div class="bg-gray-50 p-5 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">ℹ️</span>游戏信息
+                    </h2>
+                    <div class="space-y-4">
                         <div>
                             <p class="text-gray-600 text-sm">当前回合</p>
                             <div id="current-player" class="flex items-center mt-1">
-                                <div id="player-indicator" class="w-6 h-6 rounded-full border-2 border-gray-300 mr-2 piece-shadow"></div>
-                                <span id="player-text" class="font-semibold text-lg"></span>
+                                <div id="player-indicator" class="w-5 h-5 rounded-full bg-player border-2 border-gray-300 mr-2 piece-shadow"></div>
+                                <span id="player-text" class="font-medium">玩家</span>
                             </div>
                         </div>
                         <div>
                             <p class="text-gray-600 text-sm">游戏状态</p>
-                            <p id="game-status" class="mt-1 font-semibold text-lg text-gray-800">游戏进行中</p>
+                            <p id="game-status" class="mt-1 font-medium text-gray-800">游戏进行中</p>
                         </div>
-                    </div>
-                </div>
-
-                <div class="bg-white/80 p-5 rounded-lg shadow-lg border border-gray-200">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa fa-cogs text-primary mr-3 text-2xl"></i>游戏控制</h2>
-                    <div class="space-y-3">
-                        <button id="new-game" class="w-full bg-primary hover:bg-primary/90 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg"><i class="fa fa-refresh mr-2"></i>开始新局</button>
-                        <button id="undo" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg"><i class="fa fa-undo mr-2"></i>悔棋</button>
-                        <button id="difficulty-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg"><i class="fa fa-bolt mr-2"></i>难度: <span id="difficulty-text">一般</span></button>
-                        <button id="mode-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg"><i class="fa fa-users mr-2"></i>模式: <span id="mode-text">玩家 vs 开元</span></button>
-                        <button id="music-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg"><i class="fa fa-music mr-2"></i>音乐: <span id="music-text">关闭</span></button>
-                        <button id="close-game" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg"><i class="fa fa-power-off mr-2"></i>关闭游戏</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 棋盘区域 -->
-            <div class="w-full md:w-2/3 flex flex-col items-center">
-                <div class="relative w-full max-w-lg mx-auto">
-                    <div id="board-container" class="board-shadow rounded-lg overflow-hidden relative border-4 border-primary">
-                        <canvas id="board" class="bg-board"></canvas>
-                        <div id="board-overlay"></div>
-                        <div id="thinking" class="absolute inset-0 bg-black/50 flex items-center justify-center hidden rounded-lg">
-                            <div class="bg-white p-6 rounded-lg text-center shadow-xl">
-                                <div class="flex justify-center mb-3">
-                                    <div class="w-4 h-4 rounded-full bg-primary mx-1 thinking-indicator"></div>
-                                    <div class="w-4 h-4 rounded-full bg-primary mx-1 thinking-indicator" style="animation-delay: 0.3s"></div>
-                                    <div class="w-4 h-4 rounded-full bg-primary mx-1 thinking-indicator" style="animation-delay: 0.6s"></div>
-                                </div>
-                                <p class="text-primary font-bold text-lg">开元正在思考...</p>
+                        <div id="winner-info" class="hidden">
+                            <p class="text-gray-600 text-sm">获胜方</p>
+                            <div class="mt-1 flex items-center">
+                                <div id="winner-indicator" class="w-5 h-5 rounded-full mr-2 piece-shadow"></div>
+                                <span id="winner-text" class="font-medium"></span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- 游戏日志记录区域 -->
-                <div class="w-full max-w-lg mx-auto mt-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">游戏日志记录</h3>
-                    <div id="game-log" class="game-log-container">
-                        <!-- Log messages will be appended here -->
+
+                <div class="bg-gray-50 p-5 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">⚙️</span>游戏控制
+                    </h2>
+                    <div class="space-y-3">
+                        <button id="new-game" class="w-full bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                            <span class="mr-2">🔄</span>新游戏
+                        </button>
+                        <button id="undo" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                            <span class="mr-2">↩️</span>悔棋
+                        </button>
+                        <!-- 难度切换按钮已移除 -->
+                        <button id="mode-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                            <span class="mr-2">👥</span>模式: <span id="mode-text">玩家 vs 开元</span>
+                        </button>
+                        <!-- 添加音乐播放/暂停按钮 -->
+                        <button id="music-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                            <span class="mr-2" id="music-icon">🎵</span>音乐: <span id="music-text">暂停</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-5 rounded-lg shadow-md">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">💡</span>游戏规则
+                    </h2>
+                    <ul class="text-gray-700 space-y-2 text-sm">
+                        <li class="flex items-start">
+                            <span class="mr-2">✅</span>
+                            <span>黑棋先下，白棋后下</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="mr-2">✅</span>
+                            <span>先在横、竖或斜方向连成五子者获胜</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 棋盘区域 -->
+            <div class="w-full md:w-3/4 flex flex-col items-center">
+                <div class="relative">
+                    <div id="board-container" class="board-shadow rounded-lg overflow-hidden relative">
+                        <canvas id="board" class="bg-board"></canvas>
+                        <div id="thinking" class="absolute inset-0 bg-black/40 flex items-center justify-center hidden">
+                            <div class="bg-white p-6 rounded-lg text-center">
+                                <div class="flex justify-center mb-3">
+                                    <div class="w-3 h-3 rounded-full bg-primary mx-1 thinking-indicator"></div>
+                                    <div class="w-3 h-3 rounded-full bg-primary mx-1 thinking-indicator" style="animation-delay: 0.3s"></div>
+                                    <div class="w-3 h-3 rounded-full bg-primary mx-1 thinking-indicator" style="animation-delay: 0.6s"></div>
+                                </div>
+                                <p class="text-primary font-bold">开元正在思考...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 w-full">
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-md">
+                        <h3 class="font-bold text-gray-800 mb-2">游戏日志</h3>
+                        <div id="game-log" class="h-32 overflow-y-auto text-sm text-gray-700 space-y-1">
+                            <p class="text-gray-500 italic">游戏开始，请点击棋盘落子</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
+
+        <!-- 页脚 -->
+        <footer class="bg-gray-800 text-white p-4 text-center text-sm">
+            <p>五子棋游戏 &copy; 2025 | Designed by 开元 </p>
+        </footer>
     </div>
 
-    <!-- 胜负提示模态框 -->
+    <!-- 胜利提示模态框 -->
     <div id="winner-modal" class="modal">
         <div class="modal-content">
-            <div id="result-container-normal" class="result-panel-container">
-                <!-- 获胜方 -->
-                <div id="winner-panel" class="result-panel winner">
-                    <div class="confetti-container"></div>
-                    <h3 id="winner-title">胜利</h3>
-                    <p id="winner-name"></p>
-                </div>
-                <!-- 失败方 -->
-                <div id="loser-panel" class="result-panel loser">
-                    <div class="clouds-container"></div>
-                    <h3 id="loser-title">惜败</h3>
-                    <p id="loser-name"></p>
-                </div>
-            </div>
-             <div id="result-container-draw" class="result-panel-container" style="display: none;">
-                <div class="result-panel" style="width:100%; background-color: var(--color-f8f8f8);">
-                    <h3>平局</h3>
-                    <p>棋逢对手，再战一局！</p>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button id="new-game-modal" class="bg-primary hover:bg-primary/90 text-white py-2 px-6 rounded-lg transition-all duration-300 font-semibold shadow-md">开始新局</button>
-                <button id="close-modal" class="bg-gray-400 hover:bg-gray-500 text-white py-2 px-6 rounded-lg transition-all duration-300 font-semibold shadow-md">关闭提示</button>
-            </div>
+            <span class="close">&times;</span>
+            <h2 id="winner-modal-title">胜利提示</h2>
+            <p id="winner-modal-message"></p>
         </div>
     </div>
 
+    <!-- 添加音频元素 -->
     <audio id="music" src="jasmine_flower.mp3" loop></audio>
 
-    <footer class="mt-8 text-center text-gray-600 text-sm">
-        <p>五子棋游戏 &copy; 2025 | Designed by 开元 </p>
-    </footer>
+    <!-- AI Worker Script -->
+    <script id="ai-worker" type="javascript/worker">
+        // AI Worker: Minimax with Alpha-Beta Pruning
+        self.onmessage = function(e) {
+            const { board, aiPlayer, searchDepth } = e.data;
+            const bestMove = findBestMove(board, aiPlayer, searchDepth);
+            self.postMessage(bestMove);
+        };
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // 获取计算样式以访问 CSS 变量
-            const computedStyle = getComputedStyle(document.documentElement);
-            const colors = {
-                primary: computedStyle.getPropertyValue('--color-primary').trim(),
-                secondary: computedStyle.getPropertyValue('--color-secondary').trim(),
-                accent: computedStyle.getPropertyValue('--color-accent').trim(),
-                board: computedStyle.getPropertyValue('--color-board').trim(),
-                opponent: computedStyle.getPropertyValue('--color-opponent').trim(),
-                player: computedStyle.getPropertyValue('--color-player').trim(),
-                highlight: computedStyle.getPropertyValue('--color-highlight').trim(),
-            };
+        const WIN_SCORE = 10000000;
 
-            // Game Constants
-            const BOARD_SIZE = 15;
-            const PIECE_SIZE_RATIO = 0.8;
-            const BOARD_PADDING_RATIO = 1;
+        // Heuristic evaluation function scoring patterns
+        const SCORE_PATTERNS = {
+            FIVE: WIN_SCORE,
+            LIVE_FOUR: 100000,
+            DEAD_FOUR: 10000,
+            LIVE_THREE: 1000,
+            DEAD_THREE: 100,
+            LIVE_TWO: 100,
+            DEAD_TWO: 10,
+            LIVE_ONE: 10,
+            DEAD_ONE: 1,
+        };
+        
+        // Finds the best move for the AI player using minimax
+        function findBestMove(board, aiPlayer, searchDepth) {
+            let bestScore = -Infinity;
+            let move = null;
+            const moves = getPossibleMoves(board);
 
-            // DOM Elements
-            const canvas = document.getElementById('board');
-            const ctx = canvas.getContext('2d');
-            const boardContainer = document.getElementById('board-container');
-            const boardOverlay = document.getElementById('board-overlay');
-            const currentPlayerIndicator = document.getElementById('player-indicator');
-            const currentPlayerText = document.getElementById('player-text');
-            const gameStatus = document.getElementById('game-status');
-            const newGameBtn = document.getElementById('new-game');
-            const undoBtn = document.getElementById('undo');
-            const difficultyToggle = document.getElementById('difficulty-toggle');
-            const difficultyText = document.getElementById('difficulty-text');
-            const thinkingIndicator = document.getElementById('thinking');
-            const modeToggle = document.getElementById('mode-toggle');
-            const modeText = document.getElementById('mode-text');
-            const musicToggle = document.getElementById('music-toggle');
-            const musicText = document.getElementById('music-text');
-            const closeGameBtn = document.getElementById('close-game');
-            const music = document.getElementById('music');
-            const gameLog = document.getElementById('game-log'); // New: Game Log element
-            
-            // Modal Elements
-            const winnerModal = document.getElementById('winner-modal');
-            const resultContainerNormal = document.getElementById('result-container-normal');
-            const resultContainerDraw = document.getElementById('result-container-draw');
-            const winnerPanel = document.getElementById('winner-panel');
-            const loserPanel = document.getElementById('loser-panel');
-            const winnerName = document.getElementById('winner-name');
-            const loserName = document.getElementById('loser-name');
-            const newGameModalBtn = document.getElementById('new-game-modal');
-            const closeModalBtn = document.getElementById('close-modal');
-
-            // Game State
-            let gameBoard;
-            let humanPlayer;
-            let aiPlayer;
-            let currentPlayer;
-            let gameOver;
-            let moveHistory;
-            let lastMovePosition;
-            let actualCellSize, actualPieceSize, actualBoardPadding;
-            let hoverX = -1, hoverY = -1; // New: Mouse hover coordinates
-
-            // Game Settings
-            let gameMode = 1; // 1: Player vs AI, 2: Player vs Player
-            let difficulty = 2; // 1: Easy, 2: Normal, 3: Hard
-            let isFirstPlayerBlack = true; // Tracks if Player 1 (or human) is black
-
-            // AI evaluation patterns
-            const patterns = {
-                FIVE: 1000000,
-                LIVE_FOUR: 50000,
-                DEAD_FOUR: 5000,
-                LIVE_THREE: 5000,
-                DEAD_THREE: 500,
-                LIVE_TWO: 100,
-                DEAD_TWO: 10,
-            };
-
-            // Function to log messages to the game log area
-            function logMessage(message) {
-                const p = document.createElement('p');
-                p.textContent = message;
-                gameLog.appendChild(p);
-                // Scroll to the bottom to show the latest message
-                gameLog.scrollTop = gameLog.scrollHeight;
-            }
-
-            function setCanvasSize() {
-                const containerWidth = boardContainer.offsetWidth;
-                actualCellSize = Math.floor(containerWidth / (BOARD_SIZE - 1 + BOARD_PADDING_RATIO * 2));
-                actualPieceSize = actualCellSize * PIECE_SIZE_RATIO;
-                actualBoardPadding = actualCellSize * BOARD_PADDING_RATIO;
-                const size = (BOARD_SIZE - 1) * actualCellSize + actualBoardPadding * 2;
-                canvas.width = size;
-                canvas.height = size;
-                drawBoard();
-            }
-
-            function resetBoardAndState() {
-                gameBoard = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(0));
-                gameOver = false;
-                moveHistory = [];
-                lastMovePosition = null;
-                boardOverlay.style.display = 'none';
-                winnerModal.style.display = 'none'; // 确保模态框在重置时隐藏
-                currentPlayer = 1; // Black always starts
-                gameLog.innerHTML = ''; // Clear game log on new game
-                logMessage("游戏开始！");
-            }
-
-            function startGame() {
-                resetBoardAndState();
-
-                if (gameMode === 1) { // Setup for PvE
-                    humanPlayer = isFirstPlayerBlack ? 1 : 2;
-                    aiPlayer = isFirstPlayerBlack ? 2 : 1;
-                }
-
-                updateGameStatus();
-                setCanvasSize();
-
-                if (gameMode === 1 && currentPlayer === aiPlayer) {
-                    logMessage("开元先行。");
-                    aiTurn();
-                } else if (gameMode === 1) {
-                    logMessage("玩家先行。");
-                } else {
-                    logMessage("玩家1先行。");
+            for (const [r, c] of moves) {
+                board[r][c] = aiPlayer;
+                let score = minimax(board, searchDepth - 1, -Infinity, Infinity, false, aiPlayer);
+                board[r][c] = 0; // Undo the move
+                if (score > bestScore) {
+                    bestScore = score;
+                    move = { r, c };
                 }
             }
+            // If no good move is found (e.g., at the start), choose a random central point
+            if (!move && moves.length > 0) {
+                move = moves[Math.floor(Math.random() * moves.length)];
+            } else if (!move) {
+                const center = Math.floor(board.length / 2);
+                move = { r: center, c: center };
+            }
+            return move;
+        }
 
-            function drawBoard() {
-                const size = canvas.width;
-                ctx.clearRect(0, 0, size, size);
-                ctx.fillStyle = colors.board; // 使用 CSS 变量
-                ctx.fillRect(0, 0, size, size);
-                ctx.strokeStyle = colors.primary; // 使用 CSS 变量
-                ctx.lineWidth = 1;
+        // Minimax algorithm with Alpha-Beta Pruning
+        function minimax(board, depth, alpha, beta, isMaximizing, aiPlayer) {
+            let score = evaluateBoard(board, aiPlayer);
 
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(actualBoardPadding, actualBoardPadding + i * actualCellSize);
-                    ctx.lineTo(size - actualBoardPadding, actualBoardPadding + i * actualCellSize);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(actualBoardPadding + i * actualCellSize, actualBoardPadding);
-                    ctx.lineTo(actualBoardPadding + i * actualCellSize, size - actualBoardPadding);
-                    ctx.stroke();
+            if (Math.abs(score) >= WIN_SCORE || depth === 0) {
+                return score;
+            }
+
+            const humanPlayer = aiPlayer === 1 ? 2 : 1;
+            const moves = getPossibleMoves(board);
+
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (const [r, c] of moves) {
+                    board[r][c] = aiPlayer;
+                    let newEval = minimax(board, depth - 1, alpha, beta, false, aiPlayer);
+                    board[r][c] = 0;
+                    maxEval = Math.max(maxEval, newEval);
+                    alpha = Math.max(alpha, newEval);
+                    if (beta <= alpha) {
+                        break;
+                    }
                 }
+                return maxEval;
+            } else { // Minimizing
+                let minEval = Infinity;
+                for (const [r, c] of moves) {
+                    board[r][c] = humanPlayer;
+                    let newEval = minimax(board, depth - 1, alpha, beta, true, aiPlayer);
+                    board[r][c] = 0;
+                    minEval = Math.min(minEval, newEval);
+                    beta = Math.min(beta, newEval);
+                    if (beta <= alpha) {
+                        break;
+                    }
+                }
+                return minEval;
+            }
+        }
+        
+        // Gets possible moves, prioritizing positions around existing pieces
+        function getPossibleMoves(board) {
+            const moves = [];
+            const size = board.length;
+            const hasMove = new Set();
 
-                const starPoints = [{x: 3, y: 3}, {x: 3, y: 11}, {x: 7, y: 7}, {x: 11, y: 3}, {x: 11, y: 11}];
-                starPoints.forEach(p => drawStarPoint(p.x, p.y));
-
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] !== 0) {
-                            drawPiece(i, j, gameBoard[i][j] === 1 ? 'black' : 'white');
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (board[r][c] === 0) {
+                        // Prioritize positions around existing pieces
+                        if (hasNeighbor(board, r, c, size)) {
+                            moves.push([r, c]);
                         }
                     }
                 }
-
-                if (lastMovePosition) {
-                    drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
+            }
+            // If no pieces on board, return center point
+            if (moves.length === 0) {
+                 const center = Math.floor(size / 2);
+                 if(board[center][center] === 0) moves.push([center, center]);
+            }
+            return moves;
+        }
+        
+        // Checks if a position has a neighbor piece
+        function hasNeighbor(board, r, c, size) {
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const newR = r + i;
+                    const newC = c + j;
+                    if (newR >= 0 && newR < size && newC >= 0 && newC < size && board[newR][newC] !== 0) {
+                        return true;
+                    }
                 }
+            }
+            return false;
+        }
 
-                // Draw hover piece if applicable
-                if (hoverX !== -1 && hoverY !== -1 && gameBoard[hoverX][hoverY] === 0 && !gameOver && (gameMode === 2 || currentPlayer === humanPlayer)) {
-                    ctx.globalAlpha = 0.5; // Set transparency for ghost piece
-                    drawPiece(hoverX, hoverY, currentPlayer === 1 ? 'black' : 'white');
-                    ctx.globalAlpha = 1.0; // Reset transparency
+        // Evaluates the entire board for a given AI player
+        function evaluateBoard(board, aiPlayer) {
+            let totalScore = 0;
+            const humanPlayer = aiPlayer === 1 ? 2 : 1;
+            totalScore += calculateScoreForPlayer(board, aiPlayer, aiPlayer);
+            totalScore -= calculateScoreForPlayer(board, humanPlayer, aiPlayer) * 1.2; // Give higher weight to opponent's threats
+            return totalScore;
+        }
+
+        // Calculates the score for a specific player on the board
+        function calculateScoreForPlayer(board, player, aiPlayer) {
+            let score = 0;
+            const size = board.length;
+            const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (board[r][c] === player) {
+                        directions.forEach(([dr, dc]) => {
+                            score += evaluateDirection(board, r, c, dr, dc, player);
+                        });
+                    }
+                }
+            }
+            return score;
+        }
+        
+        // Evaluates a line in a specific direction from a starting point
+        function evaluateDirection(board, r, c, dr, dc, player) {
+            const line = [];
+            // Look 4 steps ahead
+            for (let i = 0; i < 5; i++) {
+                const newR = r + i * dr;
+                const newC = c + i * dc;
+                if (newR >= 0 && newR < board.length && newC >= 0 && newC < board.length) {
+                    line.push(board[newR][newC]);
+                } else {
+                    line.push(-1); // Boundary
                 }
             }
             
-            function drawStarPoint(x, y) {
-                const centerX = actualBoardPadding + x * actualCellSize;
-                const centerY = actualBoardPadding + y * actualCellSize;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
-                ctx.fillStyle = colors.primary; // 使用 CSS 变量
-                ctx.fill();
+            // Check previous position to avoid duplicate calculations
+            const prevR = r - dr;
+            const prevC = c - dc;
+            if (prevR >= 0 && prevR < board.length && prevC >= 0 && prevC < board.length && board[prevR][prevC] === player) {
+                return 0;
             }
 
-            function drawPiece(x, y, color) {
-                const centerX = actualBoardPadding + x * actualCellSize;
-                const centerY = actualBoardPadding + y * actualCellSize;
+            return getLineScore(line, player);
+        }
+        
+        // Gets the score for a given line segment
+        function getLineScore(line, player) {
+            let count = 0;
+            let openEnds = 0;
+            let opponent = player === 1 ? 2 : 1;
+
+            // Count player's pieces
+            for(let i = 0; i < 5; i++) {
+                if(line[i] === player) count++;
+                else if (line[i] === opponent) { // If opponent's piece, this line is blocked
+                    return 0;
+                }
+            }
+
+            if (count === 5) return SCORE_PATTERNS.FIVE;
+
+            // Simplified scoring logic
+            if (count === 4) {
+                // Assuming "dead four" for simplicity
+                return SCORE_PATTERNS.DEAD_FOUR;
+            }
+            if (count === 3) {
+                 return SCORE_PATTERNS.LIVE_THREE; // Simplified
+            }
+            if (count === 2) {
+                 return SCORE_PATTERNS.LIVE_TWO; // Simplified
+            }
+            if (count === 1) {
+                 return SCORE_PATTERNS.LIVE_ONE;
+            }
+            
+            return 0;
+        }
+
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Content Loaded. Initializing game.");
+            // Game constants
+            const BOARD_SIZE = 15; // 15x15 board
+            const CELL_SIZE = 40; // Size of each cell (pixels)
+            const PIECE_SIZE = CELL_SIZE * 0.8; // Piece size
+            const BOARD_PADDING = CELL_SIZE; // Board padding
+            const AI_SEARCH_DEPTH = 2; // AI search depth, can be adjusted for difficulty and response time
+            
+            // Game state
+            let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // 0:empty, 1:player, 2:AI/player2
+            let currentPlayer = 1; // 1:player, 2:AI/player2
+            let gameOver = false;
+            let moveHistory = []; // Records move history
+            let lastMovePosition = null; // Records the last move's position
+            let gameMode = 1; // 1: Player vs AI, 2: Player vs Player
+            let gameCount = 0; // Tracks the number of games played to alternate starting player/colors
+
+            let aiWorker; // AI Worker instance
+            
+            // DOM elements
+            const canvas = document.getElementById('board');
+            const ctx = canvas.getContext('2d');
+            const boardContainer = document.getElementById('board-container');
+            const currentPlayerIndicator = document.getElementById('player-indicator');
+            const currentPlayerText = document.getElementById('player-text');
+            const gameStatus = document.getElementById('game-status');
+            const winnerInfo = document.getElementById('winner-info');
+            const winnerIndicator = document.getElementById('winner-indicator');
+            const winnerText = document.getElementById('winner-text'); 
+            const newGameBtn = document.getElementById('new-game');
+            const undoBtn = document.getElementById('undo');
+            const gameLog = document.getElementById('game-log');
+            const thinkingIndicator = document.getElementById('thinking');
+            const modeToggle = document.getElementById('mode-toggle');
+            const modeText = document.getElementById('mode-text');
+            const winnerModal = document.getElementById('winner-modal');
+            const winnerModalTitle = document.getElementById('winner-modal-title');
+            const winnerModalMessage = document.getElementById('winner-modal-message');
+            const closeModalBtn = document.querySelector('.close');
+            // Music related elements
+            const music = document.getElementById('music');
+            const musicToggle = document.getElementById('music-toggle');
+            const musicText = document.getElementById('music-text');
+            const musicIcon = document.getElementById('music-icon'); // Get the music icon element
+
+            // Set Canvas size
+            function setCanvasSize() {
+                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2; // Adjust canvas size to fit pieces at boundaries
+                canvas.width = size;
+                canvas.height = size;
+                canvas.style.width = `${size}px`;
+                canvas.style.height = `${size}px`;
+                boardContainer.style.width = `${size}px`;
+                boardContainer.style.height = `${size}px`;
+            }
+            
+            // Initialize game
+            function initGame() {
+                console.log("initGame called. Initial currentPlayer:", currentPlayer, "gameMode:", gameMode);
+                // Initialize AI Worker if not already done
+                if (!aiWorker) {
+                    try {
+                        const workerScript = document.getElementById('ai-worker').textContent;
+                        const blob = new Blob([workerScript], { type: 'application/javascript' });
+                        aiWorker = new Worker(URL.createObjectURL(blob));
+                        aiWorker.onmessage = (e) => {
+                            handleAIMove(e.data);
+                        };
+                    } catch (error) {
+                        console.error("Failed to create AI Worker:", error);
+                        showWinnerModal("Error", "抱歉，您的浏览器不支持Web Worker，AI无法运行。");
+                    }
+                }
+
+                setCanvasSize();
+                gameBoard = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
+                gameOver = false;
+                moveHistory = [];
+                lastMovePosition = null;
+                
+                gameCount++; // Increment game count for each new game
+
+                // Determine starting player and colors based on gameCount
+                if (gameCount % 2 === 1) { // Odd game count: Player 1 (black) goes first
+                    currentPlayer = 1;
+                    // Player 1 is black, Player 2/AI is white
+                    document.documentElement.style.setProperty('--player', '#000000');
+                    document.documentElement.style.setProperty('--opponent', '#FFFFFF');
+                } else { // Even game count: Player 2/AI (black) goes first
+                    currentPlayer = 2;
+                    // Player 1 is white, Player 2/AI is black
+                    document.documentElement.style.setProperty('--player', '#FFFFFF');
+                    document.documentElement.style.setProperty('--opponent', '#000000');
+                }
+
+                drawBoard(); // Draw board with new piece colors
+                
+                // Update UI
+                updateGameStatus();
+                clearGameLog();
+                logMessage('游戏开始，请点击棋盘落子');
+                winnerModal.style.display = 'none';
+
+                // If AI is player 2 and it's AI's turn to start
+                if (gameMode === 1 && currentPlayer === 2) {
+                    console.log("initGame: AI is starting the game.");
+                    thinkingIndicator.classList.remove('hidden');
+                    if (aiWorker) {
+                        setTimeout(() => {
+                            aiWorker.postMessage({
+                                board: JSON.parse(JSON.stringify(gameBoard)),
+                                aiPlayer: 2,
+                                searchDepth: AI_SEARCH_DEPTH
+                            });
+                        }, 500);
+                    }
+                }
+            }
+            
+            // Draw the board
+            function drawBoard() {
+                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
+                ctx.clearRect(0, 0, size, size);
+                
+                // Draw board background
+                ctx.fillStyle = '#DEB887';
+                ctx.fillRect(0, 0, size, size);
+                
+                // Draw grid lines
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 1;
+                
+                // Draw horizontal and vertical lines
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    // Horizontal lines
+                    ctx.beginPath();
+                    ctx.moveTo(BOARD_PADDING, BOARD_PADDING + i * CELL_SIZE);
+                    ctx.lineTo(size - BOARD_PADDING, BOARD_PADDING + i * CELL_SIZE);
+                    ctx.stroke();
+                    
+                    // Vertical lines
+                    ctx.beginPath();
+                    ctx.moveTo(BOARD_PADDING + i * CELL_SIZE, BOARD_PADDING);
+                    ctx.lineTo(BOARD_PADDING + i * CELL_SIZE, size - BOARD_PADDING);
+                    ctx.stroke();
+                }
+                
+                // Draw star points
+                const starPoints = [
+                    {r: 3, c: 3}, {r: 3, c: 11}, 
+                    {r: 7, c: 7}, // Center point
+                    {r: 11, c: 3}, {r: 11, c: 11}
+                ];
+                
+                starPoints.forEach(point => {
+                    drawStarPoint(point.r, point.c);
+                });
+                
+                // Draw all pieces
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (gameBoard[r][c] === 1) {
+                            drawPiece(r, c, 'player'); // Use 'player' color from CSS variable
+                        } else if (gameBoard[r][c] === 2) {
+                            drawPiece(r, c, 'opponent'); // Use 'opponent' color from CSS variable
+                        }
+                    }
+                }
+                
+                // Draw marker for the last move
+                if (lastMovePosition) {
+                    drawLastMoveMarker(lastMovePosition.r, lastMovePosition.c);
+                }
+            }
+            
+            // Draw star point
+            function drawStarPoint(r, c) {
+                const centerX = BOARD_PADDING + c * CELL_SIZE;
+                const centerY = BOARD_PADDING + r * CELL_SIZE;
+                const radius = 4;
+                
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, actualPieceSize / 2, 0, 2 * Math.PI);
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = '#8B4513';
+                ctx.fill();
+            }
+            
+            // Draw piece
+            function drawPiece(r, c, colorType) { // Changed color to colorType to use CSS variables
+                const centerX = BOARD_PADDING + c * CELL_SIZE;
+                const centerY = BOARD_PADDING + r * CELL_SIZE;
+                
+                // Get actual color from CSS variables
+                const pieceColor = getComputedStyle(document.documentElement).getPropertyValue(`--${colorType}`).trim();
+
+                // Draw shadow
+                ctx.beginPath();
+                ctx.arc(centerX + 2, centerY + 2, PIECE_SIZE / 2, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fill();
+                
+                // Draw piece
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, PIECE_SIZE / 2, 0, 2 * Math.PI);
+                
+                // Create radial gradient
                 const gradient = ctx.createRadialGradient(
-                    centerX - actualPieceSize / 5, centerY - actualPieceSize / 5, actualPieceSize / 10,
-                    centerX, centerY, actualPieceSize / 2
+                    centerX - PIECE_SIZE / 5, centerY - PIECE_SIZE / 5, PIECE_SIZE / 10,
+                    centerX, centerY, PIECE_SIZE / 2
                 );
-                if (color === 'white') {
+                
+                if (pieceColor === '#FFFFFF' || pieceColor === '#FFF') { // White piece
                     gradient.addColorStop(0, '#FFFFFF');
                     gradient.addColorStop(1, '#E6E6E6');
                     ctx.strokeStyle = '#D9D9D9';
-                } else {
+                } else { // Black piece
                     gradient.addColorStop(0, '#404040');
                     gradient.addColorStop(1, '#000000');
                     ctx.strokeStyle = '#333333';
                 }
+                
                 ctx.fillStyle = gradient;
                 ctx.fill();
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
-
-            function drawLastMoveMarker(x, y) {
-                const centerX = actualBoardPadding + x * actualCellSize;
-                const centerY = actualBoardPadding + y * actualCellSize;
+            
+            // Draw marker for the last move
+            function drawLastMoveMarker(r, c) {
+                const centerX = BOARD_PADDING + c * CELL_SIZE;
+                const centerY = BOARD_PADDING + r * CELL_SIZE;
+                const radius = PIECE_SIZE / 4;
+                
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, actualPieceSize / 4, 0, 2 * Math.PI);
-                ctx.fillStyle = colors.accent; // 使用 CSS 变量
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = '#FF69B4'; // Use bright pink as marker color
                 ctx.fill();
             }
+            
+            // Check if any player wins
+            function checkWin(r, c, player) {
+                const directions = [
+                    { dr: 1, dc: 0 },  // Vertical
+                    { dr: 0, dc: 1 },  // Horizontal
+                    { dr: 1, dc: 1 },  // Diagonal (top-left to bottom-right)
+                    { dr: 1, dc: -1 }  // Diagonal (top-right to bottom-left)
+                ];
 
-            function handlePlayerMove(x, y) {
-                if (gameOver || gameBoard[x][y] !== 0) return;
-                
-                if (gameMode === 1 && currentPlayer === aiPlayer) return;
-
-                gameBoard[x][y] = currentPlayer;
-                moveHistory.push({ x, y, player: currentPlayer });
-                lastMovePosition = { x, y };
-                drawBoard();
-
-                const playerColor = currentPlayer === 1 ? '黑棋' : '白棋';
-                const playerName = (gameMode === 1) ? (currentPlayer === humanPlayer ? '玩家' : '开元') : (currentPlayer === (isFirstPlayerBlack ? 1 : 2) ? '玩家 1' : '玩家 2');
-                logMessage(`${playerName} (${playerColor}) 落子于 (${x}, ${y})`);
-
-                if (checkWin(x, y, currentPlayer, gameBoard)) { // Pass gameBoard
-                    endGame(currentPlayer);
-                    return;
+                for (const { dr, dc } of directions) {
+                    let count = 1; // Current position already has one piece
+                    
+                    // Check in one direction
+                    for (let i = 1; i < 5; i++) {
+                        const newR = r + i * dr;
+                        const newC = c + i * dc;
+                        if (newR >= 0 && newR < BOARD_SIZE && newC >= 0 && newC < BOARD_SIZE && gameBoard[newR][newC] === player) {
+                            count++;
+                        } else {
+                            break;
+                        }
+                    }
+                    // Check in the opposite direction
+                    for (let i = 1; i < 5; i++) {
+                        const newR = r - i * dr;
+                        const newC = c - i * dc;
+                        if (newR >= 0 && newR < BOARD_SIZE && newC >= 0 && newC < BOARD_SIZE && gameBoard[newR][newC] === player) {
+                            count++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    // Exactly five in a row, no overline (simplified)
+                    if (count === 5) {
+                        return true;
+                    }
                 }
-                if (isBoardFull()) {
-                    endGame(0); // Draw
-                    return;
-                }
-
-                currentPlayer = (currentPlayer === 1) ? 2 : 1;
-                updateGameStatus();
-
-                if (gameMode === 1 && currentPlayer === aiPlayer) {
-                    aiTurn();
-                }
+                return false;
             }
             
-            function aiTurn() {
-                thinkingIndicator.classList.remove('hidden');
-                logMessage("开元正在思考...");
-
-                console.time("AI Thinking Time"); // 在AI计算前启动计时器
-
-                // AI 计算落子位置
-                const move = makeAiMove();
-
-                console.timeEnd("AI Thinking Time"); // 在AI计算后结束计时器
-
-                // 根据难度设置人工延迟，模拟思考过程
-                let artificialDelay = 500; // 基础延迟
-                if (difficulty === 2) {
-                    artificialDelay = 1000; // 一般模式，稍长
-                } else if (difficulty === 3) {
-                    // 困难模式的延迟可以根据实际计算时间进行调整，以达到平均10秒
-                    // 这里仍然保持一个基础延迟，实际思考时间由 makeAiMove 的计算决定
-                    artificialDelay = 2000; 
+            // Check if the board is full
+            function isBoardFull() {
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (gameBoard[r][c] === 0) {
+                            return false;
+                        }
+                    }
                 }
+                return true;
+            }
+            
+            // Handle player's move
+            function handlePlayerMove(r, c) {
+                console.log("handlePlayerMove: Entry. currentPlayer:", currentPlayer, "gameMode:", gameMode, "gameOver:", gameOver);
+                if (gameOver) {
+                    console.log("handlePlayerMove: Game over. Returning.");
+                    return;
+                }
+                if (gameBoard[r][c] !== 0) {
+                    console.log("handlePlayerMove: Cell already occupied. Returning.");
+                    return;
+                }
+                
+                // Record the move
+                gameBoard[r][c] = currentPlayer;
+                moveHistory.push({r, c, player: currentPlayer});
+                lastMovePosition = {r, c};
+                
+                // Update UI
+                drawBoard();
+                logMessage(`玩家${currentPlayer}在(${r+1},${c+1})落子`);
+                
+                // Check if player wins
+                if (checkWin(r, c, currentPlayer)) {
+                    gameOver = true;
+                    const winnerMessage = currentPlayer === 1 ? '玩家1获胜！' : (gameMode === 1 ? '开元获胜！' : '玩家2获胜！');
+                    updateGameStatus(winnerMessage);
+                    logMessage(`恭喜，${winnerMessage}`);
+                    showWinnerModal(winnerMessage);
+                    return;
+                }
+                
+                // Check if board is full
+                if (isBoardFull()) {
+                    gameOver = true;
+                    updateGameStatus('平局！');
+                    logMessage('游戏结束，平局！');
+                    showWinnerModal('平局！');
+                    return;
+                }
+                
+                // Switch player
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+                updateGameStatus();
+                console.log("handlePlayerMove: After player move, new currentPlayer:", currentPlayer);
 
-                setTimeout(() => {
-                    thinkingIndicator.classList.add('hidden');
-                    if (move) {
-                        gameBoard[move.x][move.y] = aiPlayer;
-                        moveHistory.push({ x: move.x, y: move.y, player: aiPlayer });
-                        lastMovePosition = { x: move.x, y: move.y };
+                if (gameMode === 1 && currentPlayer === 2) {
+                    console.log("handlePlayerMove: It's AI's turn, triggering AI.");
+                    // Show AI thinking indicator
+                    thinkingIndicator.classList.remove('hidden');
+                    
+                    // Trigger AI move
+                    if (aiWorker) { // Ensure worker is initialized
+                        setTimeout(() => {
+                            aiWorker.postMessage({
+                                board: JSON.parse(JSON.stringify(gameBoard)), // Deep copy
+                                aiPlayer: 2, // AI is always player 2 (white)
+                                searchDepth: AI_SEARCH_DEPTH
+                            });
+                        }, 500); // Add a small delay for AI to "think"
+                    } else {
+                        console.error("AI Worker not initialized. Cannot trigger AI.");
+                        logMessage("AI Worker未初始化，无法触发AI。");
+                        // Fallback to next player or end game if AI is crucial
+                        currentPlayer = 1; // Revert to player's turn
+                        updateGameStatus();
+                    }
+                }
+            }
+
+            // Handle AI's move
+            function handleAIMove(move) {
+                console.log("handleAIMove: Entry. currentPlayer:", currentPlayer, "gameMode:", gameMode);
+                thinkingIndicator.classList.add('hidden'); // Hide thinking indicator
+                if (move && gameBoard[move.r][move.c] === 0) {
+                    // Record AI's move
+                    gameBoard[move.r][move.c] = 2; // AI is player 2
+                    moveHistory.push({r: move.r, c: move.c, player: 2});
+                    lastMovePosition = {r: move.r, c: move.c};
+                    
+                    // Update UI
+                    drawBoard();
+                    logMessage(`开元在(${move.r+1},${move.c+1})落子`);
+                    
+                    // Check if AI wins
+                    if (checkWin(move.r, move.c, 2)) {
+                        gameOver = true;
+                        updateGameStatus('开元获胜！');
+                        logMessage('开元赢了，再试一次吧！');
+                        showWinnerModal('开元获胜！');
+                        return; // Game over, stop here
+                    }
+                    
+                    // Check if board is full
+                    if (isBoardFull()) {
+                        gameOver = true;
+                        updateGameStatus('平局！');
+                        logMessage('游戏结束，平局！');
+                        showWinnerModal('平局！');
+                        return; // Game over, stop here
+                    }
+                    
+                    // Switch to player's turn
+                    currentPlayer = 1; 
+                    updateGameStatus();
+                    console.log("handleAIMove: After AI move, new currentPlayer:", currentPlayer);
+                } else {
+                    console.log("handleAIMove: AI returned invalid move or no valid moves.");
+                    // If AI returns an invalid move, find a random valid one as fallback
+                    let validMove = findRandomValidMove();
+                    if(validMove) {
+                        gameBoard[validMove.r][validMove.c] = 2;
+                        moveHistory.push({r: validMove.r, c: validMove.c, player: 2});
+                        lastMovePosition = {r: validMove.r, c: validMove.c};
                         drawBoard();
-
-                        const playerColor = aiPlayer === 1 ? '黑棋' : '白棋';
-                        logMessage(`开元 (${playerColor}) 落子于 (${move.x}, ${move.y})`);
-
-                        if (checkWin(move.x, move.y, aiPlayer, gameBoard)) { // Pass gameBoard
-                            endGame(aiPlayer);
+                        logMessage(`开元在(${validMove.r+1},${validMove.c+1})落子 (Fallback)`);
+                        if (checkWin(validMove.r, validMove.c, 2)) {
+                            gameOver = true;
+                            updateGameStatus('开元获胜！');
+                            logMessage('开元赢了，再试一次吧！');
+                            showWinnerModal('开元获胜！');
                             return;
                         }
                         if (isBoardFull()) {
-                            endGame(0);
+                            gameOver = true;
+                            updateGameStatus('平局！');
+                            logMessage('游戏结束，平局！');
+                            showWinnerModal('平局！');
                             return;
                         }
-
-                        currentPlayer = humanPlayer;
+                        currentPlayer = 1; 
                         updateGameStatus();
+                        console.log("handleAIMove: After AI fallback move, new currentPlayer:", currentPlayer);
+                    } else {
+                         gameOver = true;
+                         updateGameStatus('平局！'); // No valid moves left
+                         logMessage('游戏结束，平局！');
+                         showWinnerModal('平局！');
+                         console.log("handleAIMove: No valid moves for AI, declaring draw.");
                     }
-                }, artificialDelay + Math.random() * 500); // 添加一个小的随机分量
+                }
             }
             
-            function findWinningMove(player, board) {
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (board[i][j] === 0) {
-                            board[i][j] = player;
-                            if (checkWin(i, j, player, board)) { // Pass board
-                                board[i][j] = 0;
-                                return { x: i, y: j };
-                            }
-                            board[i][j] = 0;
+            // Finds a random valid move as a fallback
+            function findRandomValidMove() {
+                const emptySpots = [];
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (gameBoard[r][c] === 0) {
+                            emptySpots.push({r, c});
                         }
                     }
+                }
+                if (emptySpots.length > 0) {
+                    return emptySpots[Math.floor(Math.random() * emptySpots.length)];
                 }
                 return null;
             }
-
-            function makeAiMove() {
-                let winningMove = findWinningMove(aiPlayer, gameBoard);
-                if (winningMove) return winningMove;
-
-                let blockingMove = findWinningMove(humanPlayer, gameBoard);
-                if (blockingMove) return blockingMove;
-
-                // 根据难度和游戏进程动态确定搜索深度
-                let currentSearchDepth;
-                const movesMade = moveHistory.length;
-
-                if (difficulty === 1) { // 简单模式
-                    currentSearchDepth = 1; 
-                } else if (difficulty === 2) { // 一般模式
-                    currentSearchDepth = (movesMade < 4) ? 2 : 3; 
-                } else { // 困难模式 (difficulty === 3)
-                    // 避免采用四层深度，最大深度为 3
-                    currentSearchDepth = (movesMade < 6) ? 2 : 3; 
-                }
-
-                let bestScore = -Infinity;
-                let bestMove = null;
-                
-                // 获取排序后的候选移动，优先考虑中心区域和有棋子附近的点
-                const candidateMoves = getSortedCandidateMoves(gameBoard);
-
-                for (const move of candidateMoves) {
-                    const { x, y } = move;
-                    gameBoard[x][y] = aiPlayer;
-                    // Minimax 递归调用，使用动态确定的搜索深度
-                    let score = minimax(gameBoard, currentSearchDepth - 1, -Infinity, Infinity, false);
-                    gameBoard[x][y] = 0; // 撤销棋子
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMove = { x, y };
-                    }
-                }
-                return bestMove || makeRandomMove();
-            }
-
-            function minimax(board, depth, alpha, beta, isMaximizing) {
-                let winner = getWinner(board); 
-                if (winner !== 0) {
-                    return (winner === aiPlayer ? patterns.FIVE : -patterns.FIVE) * (depth + 1);
-                }
-                if (depth === 0 || isBoardFull(board)) { 
-                    return evaluateBoard(board); 
-                }
-
-                const player = isMaximizing ? aiPlayer : humanPlayer;
-                let bestValue = isMaximizing ? -Infinity : Infinity;
-                const candidateMoves = getSortedCandidateMoves(board);
-
-                for (const move of candidateMoves) {
-                    const { x, y } = move;
-                    board[x][y] = player;
-                    const value = minimax(board, depth - 1, alpha, beta, !isMaximizing);
-                    board[x][y] = 0;
-
-                    if (isMaximizing) {
-                        bestValue = Math.max(bestValue, value);
-                        alpha = Math.max(alpha, value);
-                    } else {
-                        bestValue = Math.min(bestValue, value);
-                        beta = Math.min(beta, value);
-                    }
-                    if (beta <= alpha) break;
-                }
-                return bestValue;
-            }
-
-            function evaluateBoard(board) {
-                let aiScore = 0;
-                let humanScore = 0;
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (board[i][j] === 0) {
-                           aiScore += evaluatePosition(i, j, aiPlayer, board); // Pass board
-                           humanScore += evaluatePosition(i, j, humanPlayer, board); // Pass board
-                        }
-                    }
-                }
-                return aiScore - humanScore * 1.5;
-            }
-
-            function evaluatePosition(x, y, player, boardToEvaluate) { // Added boardToEvaluate
-                let score = 0;
-                const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
-                for (const [dx, dy] of directions) {
-                    score += getLineScore(x, y, dx, dy, player, boardToEvaluate); // Pass boardToEvaluate
-                }
-                return score;
-            }
-
-            function getLineScore(x, y, dx, dy, player, boardToScan) { // Added boardToScan
-                let count = 0;
-                let openEnds = 0;
-                const opponent = player === 1 ? 2 : 1;
-
-                for (let i = 1; i < 5; i++) {
-                    const nx = x + i * dx, ny = y + i * dy;
-                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || boardToScan[nx][ny] === opponent) break;
-                    if (boardToScan[nx][ny] === 0) { openEnds++; break; }
-                    if (boardToScan[nx][ny] === player) count++;
-                }
-
-                for (let i = 1; i < 5; i++) {
-                    const nx = x - i * dx, ny = y - i * dy;
-                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || boardToScan[nx][ny] === opponent) break;
-                    if (boardToScan[nx][ny] === 0) { openEnds++; break; }
-                    if (boardToScan[nx][ny] === player) count++;
-                }
-
-                if (count >= 4) return patterns.FIVE;
-                if (count === 3 && openEnds === 2) return patterns.LIVE_FOUR;
-                if (count === 3 && openEnds === 1) return patterns.DEAD_FOUR;
-                if (count === 2 && openEnds === 2) return patterns.LIVE_THREE;
-                if (count === 2 && openEnds === 1) return patterns.DEAD_THREE;
-                if (count === 1 && openEnds === 2) return patterns.LIVE_TWO;
-                if (count === 1 && openEnds === 1) return patterns.DEAD_TWO;
-                
-                return 0;
-            }
             
-            function getSortedCandidateMoves(board) {
-                const moves = [];
-                const seen = new Set();
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (board[i][j] === 0 && hasAdjacentPieces(i, j, 2, board)) {
-                            moves.push({ x: i, y: j });
-                        }
-                    }
-                }
-                if (moves.length === 0) {
-                    // 如果没有相邻棋子的空位，则返回中心点作为唯一候选，防止AI无处落子
-                    return [{x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2)}];
-                }
-                // 可以根据启发式进一步排序 moves，例如靠近中心或现有棋子的位置
-                return moves;
-            }
-
-            function hasAdjacentPieces(x, y, radius, board) {
-                for (let i = -radius; i <= radius; i++) {
-                    for (let j = -radius; j <= radius; j++) {
-                        if (i === 0 && j === 0) continue;
-                        const nx = x + i, ny = y + j;
-                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] !== 0) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-            
-            function makeRandomMove() {
-                const availableMoves = [];
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 0) availableMoves.push({ x: i, y: j });
-                    }
-                }
-                return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : null;
-            }
-
-            function checkWin(x, y, player, board) { // Added board parameter
-                const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
-                for (const [dx, dy] of directions) {
-                    let count = 1;
-                    for (let i = 1; i < 5; i++) {
-                        const nx = x + i * dx, ny = y + i * dy;
-                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] === player) count++; else break; // Use board
-                    }
-                    for (let i = 1; i < 5; i++) {
-                        const nx = x - i * dx, ny = y - i * dy;
-                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] === player) count++; else break; // Use board
-                    }
-                    if (count >= 5) return true;
-                }
-                return false;
-            }
-            
-            function getWinner(board) {
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (board[i][j] !== 0 && checkWin(i, j, board[i][j], board)) return board[i][j]; // Pass board
-                    }
-                }
-                return 0;
-            }
-
-            function isBoardFull(board = gameBoard) {
-                return board.every(row => row.every(cell => cell !== 0));
-            }
-
-            function endGame(winner) {
-                gameOver = true;
-                let winnerText, loserText;
-
-                if (winner === 0) {
-                    gameStatus.textContent = "平局！";
-                    logMessage("游戏结束：平局！");
-                    showWinnerModal(null, null, true);
-                    return;
-                }
-
-                if (gameMode === 1) {
-                    winnerText = (winner === humanPlayer) ? "玩家" : "开元";
-                    loserText = (winner === humanPlayer) ? "开元" : "玩家";
-                } else {
-                    winnerText = (winner === (isFirstPlayerBlack ? 1 : 2)) ? "玩家 1" : "玩家 2";
-                    loserText = (winner === (isFirstPlayerBlack ? 1 : 2)) ? "玩家 2" : "玩家 1";
-                }
-                
-                gameStatus.textContent = `${winnerText} 获胜!`;
-                logMessage(`游戏结束：${winnerText} 获胜！`);
-                showWinnerModal(winnerText, loserText);
-            }
-
-            function updateGameStatus() {
-                if (gameOver) return;
-                let currentPlayerName;
-                if (gameMode === 1) {
-                    currentPlayerName = (currentPlayer === humanPlayer) ? "玩家" : "开元";
-                } else {
-                    currentPlayerName = (currentPlayer === (isFirstPlayerBlack ? 1 : 2)) ? "玩家 1" : "玩家 2";
-                }
-                
-                const colorName = currentPlayer === 1 ? '黑棋' : '白棋';
-                const colorClass = currentPlayer === 1 ? 'bg-player' : 'bg-opponent';
-                
-                currentPlayerIndicator.className = `w-6 h-6 rounded-full ${colorClass} border-2 border-gray-300 mr-2 piece-shadow`;
-                currentPlayerText.textContent = `${currentPlayerName} (${colorName})`;
-                gameStatus.textContent = "游戏进行中";
-            }
-            
-            function updateDifficultyUI() {
-                difficultyText.textContent = { 1: '简单', 2: '一般', 3: '困难' }[difficulty];
-                logMessage(`难度设置为：${difficultyText.textContent}`);
-            }
-
-            function updateModeUI() {
-                modeText.textContent = gameMode === 1 ? '玩家 vs 开元' : '玩家 vs 玩家';
-                difficultyToggle.style.display = gameMode === 1 ? 'flex' : 'none';
-                logMessage(`游戏模式切换为：${modeText.textContent}`);
-            }
-
-            function showWinnerModal(winner, loser, isDraw = false) {
-                resultContainerNormal.style.display = isDraw ? 'none' : 'flex';
-                resultContainerDraw.style.display = isDraw ? 'block' : 'none';
-                
-                if (!isDraw) {
-                    winnerName.textContent = winner;
-                    loserName.textContent = loser;
+            // Update game status UI
+            function updateGameStatus(message) {
+                if (message) {
+                    gameStatus.textContent = message;
+                    winnerInfo.classList.remove('hidden');
                     
-                    winnerPanel.querySelector('.confetti-container').innerHTML = '';
-                    loserPanel.querySelector('.clouds-container').innerHTML = '';
+                    // Determine winner indicator color based on current player's piece color
+                    const player1Color = getComputedStyle(document.documentElement).getPropertyValue('--player').trim();
+                    const player2Color = getComputedStyle(document.documentElement).getPropertyValue('--opponent').trim();
 
-                    showConfetti(winnerPanel.querySelector('.confetti-container'));
-                    showClouds(loserPanel.querySelector('.clouds-container'));
-                }
-                winnerModal.style.display = 'flex'; // 显示模态框
-            }
-
-            function showConfetti(container) {
-                const colors = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f'];
-                for (let i = 0; i < 50; i++) {
-                    const confetti = document.createElement('div');
-                    confetti.classList.add('confetti');
-                    confetti.style.left = `${Math.random() * 100}%`;
-                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                    confetti.style.animationDelay = `${Math.random() * 2}s`;
-                    container.appendChild(confetti);
-                }
-            }
-
-            function showClouds(container) {
-                const cloud = document.createElement('div');
-                cloud.classList.add('cloud');
-                container.appendChild(cloud);
-            }
-
-            // Event Listeners
-            canvas.addEventListener('click', (event) => {
-                if (gameOver) return;
-                const rect = canvas.getBoundingClientRect();
-                const clickX = event.clientX - rect.left;
-                const clickY = event.clientY - rect.top;
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                
-                // 计算棋盘坐标，并四舍五入到最近的整数格点
-                const x = Math.round((clickX * scaleX - actualBoardPadding) / actualCellSize);
-                const y = Math.round((clickY * scaleY - actualBoardPadding) / actualCellSize);
-
-                // 确保点击在有效棋盘范围内
-                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                    handlePlayerMove(x, y);
-                }
-            });
-
-            // New: Mousemove event for hover effect
-            canvas.addEventListener('mousemove', (event) => {
-                if (gameOver || (gameMode === 1 && currentPlayer === aiPlayer)) {
-                    hoverX = -1; // Reset hover if game is over or AI's turn
-                    hoverY = -1;
-                    drawBoard(); // Redraw to clear ghost piece
-                    return;
-                }
-
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = event.clientX - rect.left;
-                const mouseY = event.clientY - rect.top;
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-
-                const newHoverX = Math.round((mouseX * scaleX - actualBoardPadding) / actualCellSize);
-                const newHoverY = Math.round((mouseY * scaleY - actualBoardPadding) / actualCellSize);
-
-                // Check if hover position changed and is valid
-                if (newHoverX !== hoverX || newHoverY !== hoverY) {
-                    hoverX = newHoverX;
-                    hoverY = newHoverY;
-                    drawBoard(); // Redraw to show or update ghost piece
-                }
-            });
-
-            // New: Mouseout event to clear hover effect
-            canvas.addEventListener('mouseout', () => {
-                if (hoverX !== -1 || hoverY !== -1) {
-                    hoverX = -1;
-                    hoverY = -1;
-                    drawBoard(); // Redraw to clear ghost piece
-                }
-            });
-
-
-            function startNewRound() {
-                isFirstPlayerBlack = !isFirstPlayerBlack;
-                startGame();
-                logMessage("开始新一局游戏。");
-            }
-
-            newGameBtn.addEventListener('click', startNewRound);
-            newGameModalBtn.addEventListener('click', startNewRound);
-            
-            closeModalBtn.addEventListener('click', () => {
-                winnerModal.style.display = 'none';
-                boardOverlay.style.display = 'block';
-                logMessage("关闭结果提示。");
-            });
-            
-            closeGameBtn.addEventListener('click', () => {
-                document.body.innerHTML = '<h1 style="text-align:center; margin-top: 50px;">感谢游玩，再见！</h1>';
-                logMessage("游戏已关闭。");
-            });
-
-            undoBtn.addEventListener('click', () => {
-                if (gameOver || moveHistory.length === 0) return;
-
-                if (gameMode === 1) { // Player vs AI
-                    if (currentPlayer === humanPlayer && moveHistory.length >= 2) {
-                        moveHistory.pop(); // AI move
-                        moveHistory.pop(); // Player move
-                        logMessage("悔棋：撤销玩家和开元各一步。");
-                        // State will be restored below
-                    } else if (currentPlayer === aiPlayer && moveHistory.length >= 1) {
-                         moveHistory.pop(); // AI move
-                         logMessage("悔棋：撤销开元一步。");
+                    if (message.includes('玩家1')) {
+                        winnerIndicator.style.backgroundColor = player1Color;
+                        winnerText.textContent = '玩家1';
+                    } else if (message.includes('玩家2')) {
+                        winnerIndicator.style.backgroundColor = player2Color;
+                        winnerText.textContent = '玩家2';
+                    } else if (message.includes('开元')) {
+                        winnerIndicator.style.backgroundColor = player2Color;
+                        winnerText.textContent = '开元';
+                    } else {
+                        winnerInfo.classList.add('hidden');
                     }
-                    else {
-                        return; // Cannot undo
-                    }
-                } else { // Player vs Player
-                    moveHistory.pop();
-                    logMessage("悔棋：撤销一步。");
-                }
-
-                // Rebuild board from history
-                const history = [...moveHistory];
-                resetBoardAndState();
-                moveHistory = history;
-                
-                moveHistory.forEach(move => {
-                    gameBoard[move.x][move.y] = move.player;
-                });
-
-                if (moveHistory.length > 0) {
-                    lastMovePosition = moveHistory[moveHistory.length - 1];
-                    const lastPlayer = lastMovePosition.player;
-                    currentPlayer = lastPlayer === 1 ? 2 : 1;
                 } else {
-                    lastMovePosition = null;
-                    currentPlayer = 1;
+                    gameStatus.textContent = '游戏进行中';
+                    winnerInfo.classList.add('hidden');
+                    
+                    // Determine current player indicator color based on their piece color
+                    const player1Color = getComputedStyle(document.documentElement).getPropertyValue('--player').trim();
+                    const player2Color = getComputedStyle(document.documentElement).getPropertyValue('--opponent').trim();
+
+                    if (currentPlayer === 1) {
+                        currentPlayerIndicator.style.backgroundColor = player1Color;
+                        currentPlayerText.textContent = '玩家1';
+                    } else {
+                        currentPlayerIndicator.style.backgroundColor = player2Color;
+                        currentPlayerText.textContent = gameMode === 1 ? '开元' : '玩家2';
+                    }
                 }
-                
-                if (gameMode === 1) currentPlayer = humanPlayer;
+            }
 
-                drawBoard();
-                updateGameStatus();
-            });
-
-            difficultyToggle.addEventListener('click', () => {
-                difficulty = (difficulty % 3) + 1;
-                updateDifficultyUI();
-            });
-
-            modeToggle.addEventListener('click', () => {
-                gameMode = gameMode === 1 ? 2 : 1;
-                isFirstPlayerBlack = true; // Reset starting player on mode change
-                updateModeUI();
-                startGame();
-            });
-            
+            // Music play/pause function
             musicToggle.addEventListener('click', () => {
                 if (music.paused) {
-                    music.play().catch(e => console.error("Music playback failed:", e));
-                    musicText.textContent = '开启';
-                    logMessage("背景音乐：开启");
+                    music.play();
+                    musicIcon.textContent = '🎵'; // Change icon to playing
+                    musicText.textContent = '播放';
                 } else {
                     music.pause();
-                    musicText.textContent = '关闭';
-                    logMessage("背景音乐：关闭");
+                    musicIcon.textContent = '🔇'; // Change icon to muted
+                    musicText.textContent = '暂停';
                 }
             });
 
-            // 将初始游戏启动移到 window.onload
-            window.addEventListener('load', () => {
-                updateDifficultyUI();
-                updateModeUI();
-                startGame();
+            // Initialize game
+            initGame();
+
+            // Handle board click event
+            canvas.addEventListener('click', (event) => {
+                if (gameOver || (gameMode === 1 && currentPlayer === 2)) {
+                    // If game is over or it's AI's turn in PvE mode, do nothing
+                    console.log("Canvas click ignored: gameOver or AI's turn.");
+                    return;
+                }
+
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.round((event.clientX - rect.left - BOARD_PADDING) / CELL_SIZE);
+                const y = Math.round((event.clientY - rect.top - BOARD_PADDING) / CELL_SIZE);
+
+                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                    handlePlayerMove(y, x); // Note: Swapped x, y to r, c for consistency (row, column)
+                }
             });
-            // 移除 DOMContentLoaded 中的 startGame() 调用
-            // document.addEventListener('DOMContentLoaded', () => { ... });
-            window.addEventListener('resize', setCanvasSize);
+
+            // New game button event
+            newGameBtn.addEventListener('click', () => {
+                initGame(); // Starts a new game, which now handles color/turn swapping
+            });
+
+            // Undo button event
+            undoBtn.addEventListener('click', () => {
+                console.log("Undo clicked. Before undo: currentPlayer:", currentPlayer, "moveHistory length:", moveHistory.length);
+                if (gameOver) { // Cannot undo if game is already over
+                    logMessage("游戏已结束，无法悔棋。");
+                    return;
+                }
+                if (moveHistory.length === 0) {
+                    logMessage("没有可悔的棋步。");
+                    return;
+                }
+
+                if (gameMode === 1) { // Player vs AI mode
+                    // If the last move was by AI, undo both AI's move and the player's move before it
+                    if (moveHistory[moveHistory.length - 1].player === 2) {
+                        const aiMove = moveHistory.pop();
+                        gameBoard[aiMove.r][aiMove.c] = 0;
+                        logMessage(`撤销开元在(${aiMove.r + 1},${aiMove.c + 1})的落子`);
+                        
+                        if (moveHistory.length > 0 && moveHistory[moveHistory.length - 1].player === 1) {
+                            const playerMove = moveHistory.pop();
+                            gameBoard[playerMove.r][playerMove.c] = 0;
+                            logMessage(`撤销玩家在(${playerMove.r + 1},${playerMove.c + 1})的落子`);
+                        }
+                        currentPlayer = 1; // Always return to player's turn after undoing AI's move
+                    } else if (moveHistory[moveHistory.length - 1].player === 1) {
+                        // If the last move was by player (and AI hasn't moved yet)
+                        const playerMove = moveHistory.pop();
+                        gameBoard[playerMove.r][playerMove.c] = 0;
+                        logMessage(`撤销玩家在(${playerMove.r + 1},${playerMove.c + 1})的落子`);
+                        currentPlayer = 1; // It's still player's turn
+                    }
+                } else { // Player vs Player mode
+                    const lastMove = moveHistory.pop();
+                    gameBoard[lastMove.r][lastMove.c] = 0;
+                    currentPlayer = lastMove.player === 1 ? 2 : 1; // Switch back to the player whose turn it was
+                    logMessage(`撤销玩家${lastMove.player}在(${lastMove.r + 1},${lastMove.c + 1})的落子`);
+                }
+                
+                lastMovePosition = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
+                drawBoard();
+                updateGameStatus();
+                console.log("After undo: currentPlayer:", currentPlayer, "moveHistory length:", moveHistory.length);
+            });
+
+            // Mode toggle button event
+            modeToggle.addEventListener('click', () => {
+                gameMode = gameMode === 1 ? 2 : 1;
+                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
+                modeText.textContent = modeNames[gameMode - 1];
+                logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
+                initGame(); // Restart game with new mode
+            });
+
+            // Close modal button event
+            closeModalBtn.addEventListener('click', () => {
+                winnerModal.style.display = 'none';
+            });
+
+            // Game log recording
+            function logMessage(message) {
+                const logEntry = document.createElement('p');
+                logEntry.textContent = message;
+                gameLog.appendChild(logEntry);
+                gameLog.scrollTop = gameLog.scrollHeight;
+            }
+
+            // Clear game log
+            function clearGameLog() {
+                gameLog.innerHTML = '';
+            }
+
+            // Display winner modal
+            function showWinnerModal(title, message) {
+                winnerModalTitle.textContent = title;
+                winnerModalMessage.textContent = message;
+                winnerModal.style.display = 'block';
+            }
         });
     </script>
 </body>
