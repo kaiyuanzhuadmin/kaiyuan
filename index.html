@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>五子棋对弈</title>
     <link rel="icon" type="image/png" sizes="96x96" href="me.png">
     <style>
@@ -23,6 +23,14 @@
             justify-content: flex-start;
             padding: 0.5rem;
             margin: 0;
+            /* Prevent text selection on touch devices */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: manipulation; /* Allow touch actions like pan/zoom */
         }
         
         @media (min-width: 768px) {
@@ -265,6 +273,8 @@
             margin: 0 auto;
             display: flex;
             justify-content: center;
+            /* Ensure the container is touch-action compatible for gestures */
+            touch-action: none; 
         }
         
         @media (max-width: 480px) {
@@ -339,13 +349,6 @@
             .game-log {
                 margin-top: 1.5rem;
             }
-        }
-        
-        .game-log h3 {
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
         }
         
         .log-content {
@@ -567,28 +570,40 @@
             let PIECE_SIZE = CELL_SIZE * 0.8;
             let BOARD_PADDING = CELL_SIZE;
             
+            // Canvas transformation state
+            let scale = 1.0;
+            let offsetX = 0;
+            let offsetY = 0;
+            const MIN_SCALE = 0.8; // Minimum zoom level
+            const MAX_SCALE = 3.0; // Maximum zoom level
+
+            // Touch state for pan and zoom
+            let isDragging = false;
+            let lastX = 0;
+            let lastY = 0;
+            let initialPinchDistance = null;
+
             // Calculate responsive size
             function calculateResponsiveSize() {
                 const container = document.querySelector('.board-area');
                 const containerWidth = container.clientWidth;
                 
-                // Calculate available space, considering margins
-                const availableWidth = Math.min(containerWidth - 16, window.innerWidth - 32);
-                
-                // Calculate the most suitable cell size based on available space
-                const idealCellSize = Math.floor(availableWidth / (BOARD_SIZE + 1));
-                
-                // Set different size ranges based on screen size
-                if (window.innerWidth < 480) {
-                    CELL_SIZE = Math.max(18, Math.min(25, idealCellSize)); // Small screen
-                } else if (window.innerWidth < 768) {
-                    CELL_SIZE = Math.max(22, Math.min(32, idealCellSize)); // Medium screen
-                } else {
-                    CELL_SIZE = Math.max(25, Math.min(40, idealCellSize)); // Large screen
+                // Calculate ideal cell size based on container width
+                // The board's total intrinsic width is (BOARD_SIZE - 1) * CELL_SIZE + 2 * BOARD_PADDING
+                // Since BOARD_PADDING is set to CELL_SIZE, this simplifies to (BOARD_SIZE + 1) * CELL_SIZE
+                // So, CELL_SIZE should be containerWidth / (BOARD_SIZE + 1) to fit perfectly
+                let calculatedCellSize = containerWidth / (BOARD_SIZE + 1);
+
+                if (window.innerWidth < 480) { // Very small screens (e.g., older phones)
+                    CELL_SIZE = Math.max(20, Math.min(28, calculatedCellSize)); 
+                } else if (window.innerWidth < 768) { // Tablets or larger phones
+                    CELL_SIZE = Math.max(25, Math.min(35, calculatedCellSize)); 
+                } else { // Desktop
+                    CELL_SIZE = Math.max(30, Math.min(45, calculatedCellSize)); 
                 }
                 
-                PIECE_SIZE = CELL_SIZE * 0.8;
-                BOARD_PADDING = CELL_SIZE;
+                PIECE_SIZE = CELL_SIZE * 0.85; 
+                BOARD_PADDING = CELL_SIZE; 
             }
             
             // Game state
@@ -636,7 +651,7 @@
             const difficultyConfig = {
                 1: { // Easy
                     searchDepth: 2, // Shallow search depth
-                    randomMoveChance: 0.1, // High chance of making a random move
+                    randomMoveChance: 0.4, // High chance of making a random move
                     thinkTimeRange: [200, 1000]
                 },
                 2: { // Medium
@@ -645,7 +660,7 @@
                     thinkTimeRange: [500, 3500]
                 },
                 3: { // Hard
-                    searchDepth: 4, // Deeper search depth for stronger play (reduced from 6 to 5 for performance)
+                    searchDepth: 5, // Deeper search depth for stronger play (reduced from 6 to 5 for performance)
                     randomMoveChance: 0.0, // No random moves, always best
                     thinkTimeRange: [800, 5500]
                 }
@@ -658,7 +673,7 @@
                 
                 // Get available container width
                 const containerWidth = document.querySelector('.board-area').clientWidth;
-                const maxDisplaySize = Math.min(containerWidth - 16, window.innerWidth - 32); // Leave appropriate margins
+                const maxDisplaySize = Math.min(containerWidth - 16, window.innerWidth - 32); 
                 
                 // Calculate final display size
                 const displaySize = Math.min(size, maxDisplaySize);
@@ -671,24 +686,29 @@
                 canvas.style.width = `${displaySize}px`;
                 canvas.style.height = `${displaySize}px`;
                 
-                // Store scale for click event handling
-                canvas.dataset.scale = displaySize / size;
+                canvas.dataset.originalWidth = size;
+                canvas.dataset.originalHeight = size;
                 
-                // Ensure correct container size
-                const boardContainer = document.querySelector('.board-container');
-                boardContainer.style.width = `${displaySize}px`;
-                boardContainer.style.height = `${displaySize}px`;
+                // Reset zoom and pan when resizing
+                scale = 1.0;
+                offsetX = 0;
+                offsetY = 0;
+
+                drawBoard(); // Redraw board after resizing
             }
             
             // Initialize game
             function initGame() {
-                setCanvasSize();
                 gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // Clear board
                 currentPlayer = 1; // Always black starts
                 gameOver = false;
                 moveHistory = [];
                 lastMovePosition = null;
-                // undoChances = 0; // Do not reset undo chances on new game start
+                
+                // Reset zoom and pan on new game
+                scale = 1.0;
+                offsetX = 0;
+                offsetY = 0;
                 
                 updateGameStatus();
                 clearGameLog();
@@ -707,7 +727,7 @@
                 }
                 
                 winnerModal.style.display = 'none';
-                updateUndoChancesDisplay(); // Update undo chances display
+                updateUndoChancesDisplay(); 
                 drawBoard(); // Redraw board after initialization
             }
             
@@ -715,6 +735,12 @@
             function drawBoard() {
                 const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
                 ctx.clearRect(0, 0, size, size);
+
+                ctx.save(); // Save the current canvas state
+
+                // Apply pan and zoom transformations
+                ctx.translate(offsetX, offsetY);
+                ctx.scale(scale, scale);
                 
                 // Draw board background
                 ctx.fillStyle = '#DEB887';
@@ -753,9 +779,9 @@
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (gameBoard[i][j] === 1) {
-                            drawPiece(i, j, 'black');
+                            drawPiece(i, j, 'black', 1); // Draw at full scale
                         } else if (gameBoard[i][j] === 2) {
-                            drawPiece(i, j, 'white');
+                            drawPiece(i, j, 'white', 1); // Draw at full scale
                         }
                     }
                 }
@@ -764,6 +790,8 @@
                 if (lastMovePosition) {
                     drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
                 }
+
+                ctx.restore(); // Restore the canvas state
             }
             
             // Draw star point
@@ -778,34 +806,36 @@
                 ctx.fill();
             }
             
-            // Draw piece
-            function drawPiece(x, y, color) {
+            // Draw piece with enhanced aesthetics and optional scale for animation
+            function drawPiece(x, y, color, animationScale = 1) {
                 const centerX = BOARD_PADDING + x * CELL_SIZE;
                 const centerY = BOARD_PADDING + y * CELL_SIZE;
-                
-                // Draw shadow
+                const currentPieceSize = PIECE_SIZE * animationScale;
+
+                // Draw subtle shadow for depth
                 ctx.beginPath();
-                ctx.arc(centerX + 2, centerY + 2, PIECE_SIZE / 2, 0, 2 * Math.PI);
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.arc(centerX + 2 * animationScale, centerY + 2 * animationScale, currentPieceSize / 2, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; 
                 ctx.fill();
                 
-                // Draw piece
+                // Draw piece with radial gradient for glossy effect
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, PIECE_SIZE / 2, 0, 2 * Math.PI);
+                ctx.arc(centerX, centerY, currentPieceSize / 2, 0, 2 * Math.PI);
                 
-                // Create radial gradient
                 const gradient = ctx.createRadialGradient(
-                    centerX - PIECE_SIZE / 5, centerY - PIECE_SIZE / 5, PIECE_SIZE / 10,
-                    centerX, centerY, PIECE_SIZE / 2
+                    centerX - currentPieceSize / 4, centerY - currentPieceSize / 4, currentPieceSize / 10, 
+                    centerX, centerY, currentPieceSize / 2 
                 );
                 
                 if (color === 'white') {
-                    gradient.addColorStop(0, '#FFFFFF');
-                    gradient.addColorStop(1, '#E6E6E6');
+                    gradient.addColorStop(0, '#FFFFFF'); 
+                    gradient.addColorStop(0.7, '#F0F0F0'); 
+                    gradient.addColorStop(1, '#E0E0E0'); 
                     ctx.strokeStyle = '#D9D9D9';
                 } else {
-                    gradient.addColorStop(0, '#404040');
-                    gradient.addColorStop(1, '#000000');
+                    gradient.addColorStop(0, '#404040'); 
+                    gradient.addColorStop(0.7, '#1A1A1A'); 
+                    gradient.addColorStop(1, '#000000'); 
                     ctx.strokeStyle = '#333333';
                 }
                 
@@ -813,6 +843,86 @@
                 ctx.fill();
                 ctx.lineWidth = 1;
                 ctx.stroke();
+            }
+
+            // Animate piece placement
+            function animatePiecePlacement(x, y, playerColor) {
+                let animationStartTime = null;
+                const animationDuration = 200; // milliseconds
+
+                function animate(currentTime) {
+                    if (!animationStartTime) {
+                        animationStartTime = currentTime;
+                    }
+                    const elapsedTime = currentTime - animationStartTime;
+                    const progress = Math.min(elapsedTime / animationDuration, 1); 
+
+                    const animationScale = 0.5 + (0.5 * progress); 
+
+                    // Redraw the entire board with current pan/zoom before drawing the animating piece
+                    ctx.save();
+                    ctx.translate(offsetX, offsetY);
+                    ctx.scale(scale, scale);
+                    
+                    drawBoardContentOnly(); // Draw grid, star points, and static pieces
+                    drawPiece(x, y, playerColor, animationScale); // Draw the animating piece
+
+                    ctx.restore();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Animation finished, ensure the final state is drawn correctly
+                        drawBoard(); // Full redraw to ensure all pieces are rendered correctly without animation artifacts
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+
+            // Helper to draw board content without transformations (used during animation)
+            function drawBoardContentOnly() {
+                const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
+                ctx.clearRect(0, 0, size, size);
+                
+                ctx.fillStyle = '#DEB887';
+                ctx.fillRect(0, 0, size, size);
+                
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(BOARD_PADDING, BOARD_PADDING + i * CELL_SIZE);
+                    ctx.lineTo(size - BOARD_PADDING, BOARD_PADDING + i * CELL_SIZE);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(BOARD_PADDING + i * CELL_SIZE, BOARD_PADDING);
+                    ctx.lineTo(BOARD_PADDING + i * CELL_SIZE, size - BOARD_PADDING);
+                    ctx.stroke();
+                }
+                
+                const starPoints = [
+                    {x: 3, y: 3}, {x: 3, y: 11}, 
+                    {x: 7, y: 7}, 
+                    {x: 11, y: 3}, {x: 11, y: 11}
+                ];
+                starPoints.forEach(point => {
+                    drawStarPoint(point.x, point.y);
+                });
+                
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    for (let j = 0; j < BOARD_SIZE; j++) {
+                        if (gameBoard[i][j] === 1) {
+                            drawPiece(i, j, 'black', 1);
+                        } else if (gameBoard[i][j] === 2) {
+                            drawPiece(i, j, 'white', 1);
+                        }
+                    }
+                }
+                if (lastMovePosition) {
+                    drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
+                }
             }
             
             // Draw marker for the last move
@@ -823,7 +933,7 @@
                 
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#FF69B4';
+                ctx.fillStyle = '#FF69B4'; 
                 ctx.fill();
             }
             
@@ -900,8 +1010,9 @@
                 moveHistory.push({x, y, player: currentPlayer});
                 lastMovePosition = {x, y};
                 
-                // Update UI
-                drawBoard();
+                // Animate piece placement
+                animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white');
+
                 const playerName = getPlayerName(currentPlayer);
                 const pieceColor = currentPlayer === 1 ? '黑' : '白';
                 logMessage(`${playerName}在(${x+1},${y+1})落${pieceColor}子`);
@@ -970,8 +1081,9 @@
                         moveHistory.push({x, y, player: currentPlayer});
                         lastMovePosition = {x, y};
                         
-                        // Update UI
-                        drawBoard();
+                        // Animate piece placement
+                        animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white');
+
                         const aiName = getPlayerName(currentPlayer);
                         const pieceColor = currentPlayer === 1 ? '黑' : '白';
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子`);
@@ -1151,7 +1263,6 @@
                             const scoreForPlayer = evaluatePosition(i, j, currentPlayer);
                             const scoreForOpponent = evaluatePosition(i, j, currentPlayer === 1 ? 2 : 1);
                             // Combine scores, prioritizing moves that create threats for self or block opponent's threats
-                            // Opponent's threats are even more critical to defend against (increased multiplier from 2.5 to 3.5)
                             const combinedScore = scoreForPlayer + scoreForOpponent * 3.5; 
                             moves.push({ x: i, y: j, score: combinedScore });
                         }
@@ -1159,8 +1270,7 @@
                 }
                 
                 // Sort by score in descending order, prioritize higher-scoring moves
-                // Limit the number of candidate moves to keep thinking time short
-                return moves.sort((a, b) => b.score - a.score).slice(0, 40); // Reduced candidate quantity for better performance
+                return moves.sort((a, b) => b.score - a.score).slice(0, 40); 
             }
             
             // Check if position has adjacent pieces (within a 2-unit radius)
@@ -1182,10 +1292,10 @@
                         if (gameBoard[i][j] === 0) {
                             gameBoard[i][j] = player;
                             if (checkWin(i, j, player)) {
-                                gameBoard[i][j] = 0; // Undo the move
+                                gameBoard[i][j] = 0; 
                                 return { x: i, y: j };
                             }
-                            gameBoard[i][j] = 0; // Undo the move
+                            gameBoard[i][j] = 0; 
                         }
                     }
                 }
@@ -1197,13 +1307,11 @@
                 let totalScore = 0;
                 const opponent = player === 1 ? 2 : 1;
                 
-                // Iterate through all cells to find patterns
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (gameBoard[i][j] === player) {
                             totalScore += evaluatePosition(i, j, player);
                         } else if (gameBoard[i][j] === opponent) {
-                            // Opponent's threats are much more critical to defend against (increased multiplier from 2.5 to 3.5)
                             totalScore -= evaluatePosition(i, j, opponent) * 3.5; 
                         }
                     }
@@ -1225,53 +1333,48 @@
                 let liveThreeCount = 0;
                 let blockedFourCount = 0;
                 let liveFourCount = 0;
-                let sleepFourCount = 0; // Added for patterns like PPPP_ or _PPPP
+                let sleepFourCount = 0; 
 
                 for (const [dx, dy] of directions) {
                     const pattern = getPattern(x, y, dx, dy, player);
                     const score = evaluatePattern(pattern);
-                    totalPatternScore += score; // Sum up scores from all directions
+                    totalPatternScore += score; 
 
-                    // Count specific threats for combination bonuses
                     if (pattern.includes('_PPPP_')) {
                         liveFourCount++;
                     }
                     if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) {
                         blockedFourCount++;
                     }
-                    // More precise live three detection
                     if ((pattern.includes('_PPP_') && !pattern.includes('_PPPP_')) ||
                         (pattern.includes('_P_PP_') && !pattern.includes('_P_PPP_')) ||
                         (pattern.includes('_PP_P_') && !pattern.includes('_PP_PP_'))) {
                         liveThreeCount++;
                     }
-                    // Sleep four (e.g., PPPP_ or _PPPP)
                     if (pattern.includes('PPPP_') || pattern.includes('_PPPP')) {
                         sleepFourCount++;
                     }
                 }
                 
                 // Add bonuses for combinations of threats (AlphaGo-like compound threats)
-                if (liveFourCount >= 1) { // If there's a live four, it's very strong
-                    totalPatternScore += 10000000; // Major bonus, almost a win (increased significantly)
+                if (liveFourCount >= 1) { 
+                    totalPatternScore += 10000000; 
                 }
-                if (liveThreeCount >= 2) { // Double live three
-                    totalPatternScore += 800000; // Very strong threat (increased)
+                if (liveThreeCount >= 2) { 
+                    totalPatternScore += 800000; 
                 }
-                if (liveThreeCount >= 1 && blockedFourCount >= 1) { // Live three plus a blocked four
-                    totalPatternScore += 700000; // Strong threat (increased)
+                if (liveThreeCount >= 1 && blockedFourCount >= 1) { 
+                    totalPatternScore += 700000; 
                 }
-                if (blockedFourCount >= 2) { // Double blocked four
-                    totalPatternScore += 600000; // Significant threat (increased)
+                if (blockedFourCount >= 2) { 
+                    totalPatternScore += 600000; 
                 }
-                if (sleepFourCount >= 1 && liveThreeCount >= 1) { // Sleep four plus live three
-                    totalPatternScore += 400000; // (increased)
+                if (sleepFourCount >= 1 && liveThreeCount >= 1) { 
+                    totalPatternScore += 400000; 
                 }
                 
-                // Positional bonus (center area is more valuable)
-                // For a 15x15 board, the center is (7,7). Max distance from center is 7.
                 const centerDist = Math.max(Math.abs(x - Math.floor(BOARD_SIZE/2)), Math.abs(y - Math.floor(BOARD_SIZE/2)));
-                const centerBonus = (7 - centerDist) * 25; // Increased bonus, relative to center (7,7) for 15x15 board (increased multiplier)
+                const centerBonus = (7 - centerDist) * 25; 
                 
                 return totalPatternScore + centerBonus;
             }
@@ -1281,19 +1384,18 @@
                 let pattern = '';
                 const opponent = player === 1 ? 2 : 1;
                 
-                // Check 4 cells in both directions (-4 to +4 relative to current position)
                 for (let i = -4; i <= 4; i++) {
                     const nx = x + dx * i;
                     const ny = y + dy * i;
                     
                     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
-                        pattern += 'B'; // Boundary or blocked by edge
+                        pattern += 'B'; 
                     } else if (gameBoard[nx][ny] === player) {
-                        pattern += 'P'; // Player's piece
+                        pattern += 'P'; 
                     } else if (gameBoard[nx][ny] === opponent) {
-                        pattern += 'O'; // Opponent's piece
+                        pattern += 'O'; 
                     } else {
-                        pattern += '_'; // Empty space
+                        pattern += '_'; 
                     }
                 }
                 
@@ -1304,41 +1406,32 @@
             function evaluatePattern(pattern) {
                 // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
                 
-                // Five in a row (winning condition)
-                if (pattern.includes('PPPPP')) return 10000000; // Increased win score
+                if (pattern.includes('PPPPP')) return 10000000; 
                 
-                // Live Four: _PPPP_ (can be extended to five in two ways)
-                if (pattern.includes('_PPPP_')) return 1000000; // Very high (increased)
-                // Broken Live Four (e.g., _P_PPP_, _PP_PP_, _PPP_P_)
-                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 500000; // High (increased)
+                if (pattern.includes('_PPPP_')) return 1000000; 
+                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 500000; 
                 
-                // Blocked Four (one end blocked, can still win)
-                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 100000; // Still high (increased)
-                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 80000; // Broken Four (can still win) (increased)
+                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 100000; 
+                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 80000; 
 
-                // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 10000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 5000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 10000; 
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 5000; 
 
-                // Blocked Three (can become blocked four)
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 1000; // Medium (increased)
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 500; // (increased)
+                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 1000; 
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 500; 
 
-                // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 200; // Low-medium (increased)
-                if (pattern.includes('__P_P__')) return 150; // (increased)
+                if (pattern.includes('__PP__')) return 200; 
+                if (pattern.includes('__P_P__')) return 150; 
 
-                // Blocked Two
-                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 50; // (increased)
+                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 50; 
                 
-                return 1; // Default score for empty or insignificant patterns
+                return 1; 
             }
             
             // Get a random 'good enough' move for easier difficulties
             function getRandomGoodMove() {
                 const moves = [];
                 
-                // Prioritize moves near existing pieces
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (gameBoard[i][j] === 0 && hasAdjacentPieces(i, j)) {
@@ -1348,11 +1441,9 @@
                 }
                 
                 if (moves.length === 0) {
-                    // Fallback to any random move if no adjacent spots are found
                     return getRandomMove();
                 }
                 
-                // Select a random move from the 'good' candidates
                 return moves[Math.floor(Math.random() * moves.length)];
             }
             
@@ -1400,7 +1491,6 @@
                     gameStatus.textContent = '游戏进行中';
                     winnerInfo.classList.add('hidden');
                     
-                    // Update current player indicator
                     const isCurrentPlayerBlack = currentPlayer === 1;
                     currentPlayerIndicator.className = `piece ${isCurrentPlayerBlack ? 'black' : 'white'}`;
                     
@@ -1419,7 +1509,6 @@
             // Start a new game
             function startNewGame() {
                 gameCount++;
-                // Alternate black/white start for player vs AI
                 if (gameMode === 1) {
                     playerStartsWithBlack = !playerStartsWithBlack;
                 }
@@ -1446,12 +1535,12 @@
                 winnerModal.style.display = 'block';
             }
 
-            // New: Update undo chances display
+            // Update undo chances display
             function updateUndoChancesDisplay() {
                 undoChancesDisplay.textContent = undoChances;
             }
 
-            // New: Handle redeem code submission
+            // Handle redeem code submission
             function handleRedeemCode() {
                 const code = redeemCodeInput.value.trim().toLowerCase();
                 if (code === 'kaiyuan') {
@@ -1461,14 +1550,13 @@
                 } else {
                     logMessage('兑换码无效。');
                 }
-                redeemCodeInput.value = ''; // Clear input field
+                redeemCodeInput.value = ''; 
             }
             
             // Music play/pause functionality
             musicToggle.addEventListener('click', () => {
                 if (music.paused) {
                     music.play().catch(() => {
-                        // Handle audio playback failure
                         logMessage('音乐播放失败');
                     });
                     musicText.textContent = '播放';
@@ -1481,49 +1569,154 @@
             // Initialize game
             initGame();
             
-            // Handle board click event
-            canvas.addEventListener('click', (event) => {
+            // --- Touch and Mouse Event Handling for Zoom/Pan and Click ---
+
+            // Convert screen coordinates to board coordinates (considering zoom/pan)
+            function getBoardCoordinates(clientX, clientY) {
                 const rect = canvas.getBoundingClientRect();
-                const scale = parseFloat(canvas.dataset.scale) || 1;
-                
-                // Calculate actual coordinates considering scale
-                const rawX = (event.clientX - rect.left) / scale;
-                const rawY = (event.clientY - rect.top) / scale;
-                
-                const x = Math.round((rawX - BOARD_PADDING) / CELL_SIZE);
-                const y = Math.round((rawY - BOARD_PADDING) / CELL_SIZE);
-                
-                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                    handlePlayerMove(x, y);
+                const canvasX = clientX - rect.left;
+                const canvasY = clientY - rect.top;
+
+                // Apply inverse transformation
+                const boardX = (canvasX / scale) - (offsetX / scale);
+                const boardY = (canvasY / scale) - (offsetY / scale);
+
+                const gridX = Math.round((boardX - BOARD_PADDING) / CELL_SIZE);
+                const gridY = Math.round((boardY - BOARD_PADDING) / CELL_SIZE);
+
+                return { gridX, gridY };
+            }
+
+            canvas.addEventListener('mousedown', (event) => {
+                isDragging = true;
+                lastX = event.clientX;
+                lastY = event.clientY;
+            });
+
+            canvas.addEventListener('mousemove', (event) => {
+                if (isDragging && event.buttons === 1) { // Check if left mouse button is down
+                    const dx = event.clientX - lastX;
+                    const dy = event.clientY - lastY;
+                    offsetX += dx;
+                    offsetY += dy;
+                    lastX = event.clientX;
+                    lastY = event.clientY;
+                    drawBoard();
                 }
             });
-            
-            // Add touch event support
-            canvas.addEventListener('touchstart', (event) => {
+
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false; // Reset dragging if mouse leaves canvas
+            });
+
+            canvas.addEventListener('wheel', (event) => {
                 event.preventDefault(); // Prevent page scrolling
-                
-                const touch = event.touches[0];
+                const zoomFactor = 1.1;
+                const oldScale = scale;
+
+                // Get mouse position relative to canvas (before scaling)
                 const rect = canvas.getBoundingClientRect();
-                const scale = parseFloat(canvas.dataset.scale) || 1;
-                
-                const rawX = (touch.clientX - rect.left) / scale;
-                const rawY = (touch.clientY - rect.top) / scale;
-                
-                const x = Math.round((rawX - BOARD_PADDING) / CELL_SIZE);
-                const y = Math.round((rawY - BOARD_PADDING) / CELL_SIZE);
-                
-                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                    handlePlayerMove(x, y);
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+
+                if (event.deltaY < 0) { // Zoom in
+                    scale *= zoomFactor;
+                } else { // Zoom out
+                    scale /= zoomFactor;
+                }
+
+                scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+
+                // Adjust offset to zoom towards the mouse pointer
+                offsetX = mouseX - ((mouseX - offsetX) / oldScale) * scale;
+                offsetY = mouseY - ((mouseY - offsetY) / oldScale) * scale;
+
+                drawBoard();
+            });
+
+            // Touch events for pan and zoom
+            canvas.addEventListener('touchstart', (event) => {
+                event.preventDefault(); // Prevent page scrolling and default touch actions
+                if (gameOver) return;
+
+                if (event.touches.length === 1) {
+                    isDragging = true;
+                    lastX = event.touches[0].clientX;
+                    lastY = event.touches[0].clientY;
+                    initialPinchDistance = null; // Reset pinch distance
+                } else if (event.touches.length === 2) {
+                    isDragging = false; // Disable single-finger drag when two fingers are down
+                    const touch1 = event.touches[0];
+                    const touch2 = event.touches[1];
+                    initialPinchDistance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
                 }
             }, { passive: false });
-            
+
+            canvas.addEventListener('touchmove', (event) => {
+                event.preventDefault(); // Prevent page scrolling and default touch actions
+                if (gameOver) return;
+
+                if (event.touches.length === 1 && isDragging) {
+                    const dx = event.touches[0].clientX - lastX;
+                    const dy = event.touches[0].clientY - lastY;
+                    offsetX += dx;
+                    offsetY += dy;
+                    lastX = event.touches[0].clientX;
+                    lastY = event.touches[0].clientY;
+                    drawBoard();
+                } else if (event.touches.length === 2 && initialPinchDistance !== null) {
+                    const touch1 = event.touches[0];
+                    const touch2 = event.touches[1];
+                    const currentPinchDistance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+                    
+                    const oldScale = scale;
+                    scale *= (currentPinchDistance / initialPinchDistance);
+                    scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+
+                    // Adjust offset to zoom towards the center of the pinch
+                    const centerX = (touch1.clientX + touch2.clientX) / 2;
+                    const centerY = (touch1.clientY + touch2.clientY) / 2;
+                    const rect = canvas.getBoundingClientRect();
+                    const canvasCenterX = centerX - rect.left;
+                    const canvasCenterY = centerY - rect.top;
+
+                    offsetX = canvasCenterX - ((canvasCenterX - offsetX) / oldScale) * scale;
+                    offsetY = canvasCenterY - ((canvasCenterY - offsetY) / oldScale) * scale;
+
+                    initialPinchDistance = currentPinchDistance; // Update for next move event
+                    drawBoard();
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', (event) => {
+                isDragging = false;
+                initialPinchDistance = null;
+
+                // If it was a tap (single touch, no significant movement)
+                if (event.changedTouches.length === 1) {
+                    const touch = event.changedTouches[0];
+                    // Check if it was a quick tap without much movement (threshold for tap vs drag)
+                    const dx = Math.abs(touch.clientX - lastX);
+                    const dy = Math.abs(touch.clientY - lastY);
+                    if (dx < 5 && dy < 5) { // Small movement threshold for a tap
+                        const { gridX, gridY } = getBoardCoordinates(touch.clientX, touch.clientY);
+                        if (gridX >= 0 && gridX < BOARD_SIZE && gridY >= 0 && gridY < BOARD_SIZE) {
+                            handlePlayerMove(gridX, gridY);
+                        }
+                    }
+                }
+            });
+
             // Re-adjust board on window resize
             let resizeTimeout;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     setCanvasSize();
-                    drawBoard();
                 }, 150);
             });
             
@@ -1586,7 +1779,6 @@
             difficultyToggle.addEventListener('click', () => {
                 difficulty = (difficulty % 3) + 1;
                 const difficultyLevels = ['简单', '中等', '困难'];
-                // Win rates are illustrative, actual win rate depends on AI strength
                 const winRates = ['较低', '中等', '较高']; 
                 difficultyText.textContent = `${difficultyLevels[difficulty - 1]}(胜率约${winRates[difficulty - 1]})`;
                 logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]} (AI胜率约${winRates[difficulty - 1]})`);
@@ -1597,8 +1789,8 @@
                 gameMode = gameMode === 1 ? 2 : 1;
                 const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
                 modeText.textContent = modeNames[gameMode - 1];
-                playerStartsWithBlack = true; // Reset to player starting with black
-                gameCount = 1; // Reset game count
+                playerStartsWithBlack = true; 
+                gameCount = 1; 
                 logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
                 initGame();
             });
@@ -1606,18 +1798,18 @@
             // Close modal button event
             closeModalBtn.addEventListener('click', () => {
                 winnerModal.style.display = 'none';
-                startNewGame(); // Start a new game after closing the modal
+                startNewGame(); 
             });
             
             // Close modal when clicking outside
             window.addEventListener('click', (event) => {
                 if (event.target === winnerModal) {
                     winnerModal.style.display = 'none';
-                    startNewGame(); // Start a new game after closing the modal
+                    startNewGame(); 
                 }
             });
 
-            // New: Redeem code input event listeners
+            // Redeem code input event listeners
             redeemCodeInput.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
                     handleRedeemCode();
@@ -1626,7 +1818,6 @@
 
             redeemCodeInput.addEventListener('input', () => {
                 const value = redeemCodeInput.value.trim();
-                // Check if 7 alphanumeric characters or Chinese characters
                 if (value.length === 7 && /^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(value)) {
                     handleRedeemCode();
                 }
