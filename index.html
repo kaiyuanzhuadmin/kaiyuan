@@ -345,13 +345,6 @@
             }
         }
         
-        .game-log h3 {
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
-        }
-        
         .log-content {
             height: 6rem;
             overflow-y: auto;
@@ -625,7 +618,7 @@
             const undoBtn = document.getElementById('undo');
             const undoChancesDisplay = document.getElementById('undo-chances'); // New
             const difficultyToggle = document.getElementById('difficulty-toggle');
-            const difficultyText = document.getElementById('difficulty-text');
+            const difficultyText = document.getElementById('difficulty.text');
             const gameLog = document.getElementById('game-log');
             const thinkingIndicator = document.getElementById('thinking');
             const modeToggle = document.getElementById('mode-toggle');
@@ -669,6 +662,11 @@
             let initialPinchScale = 1; // Scale at the start of pinch gesture
             let initialPinchMidX = 0; // Midpoint X at the start of pinch gesture
             let initialPinchMidY = 0; // Midpoint Y at the start of pinch gesture
+            let isGestureActive = false; // Flag to indicate if a zoom/pan gesture is active
+            let gestureTimeout = null; // Timeout for resetting isGestureActive
+            let initialTouchX = 0; // New: For tap detection
+            let initialTouchY = 0; // New: For tap detection
+            const tapThreshold = 10; // New: Max distance for a touch to be considered a tap (in pixels)
 
             // Set Canvas size
             function setCanvasSize() {
@@ -689,6 +687,7 @@
                 canvas.style.height = `${maxDisplaySize}px`;
                 
                 // Store initial scale for click event handling (before any user zoom)
+                // This is the ratio of displayed CSS width to internal canvas width
                 canvas.dataset.initialScale = maxDisplaySize / size;
                 
                 // Ensure correct container size
@@ -1568,41 +1567,59 @@
                 const containerHeight = boardContainer.clientHeight;
 
                 // Calculate current scaled board dimensions
-                const scaledBoardWidth = boardWidth * scale;
-                const scaledBoardHeight = boardHeight * scale;
+                const scaledBoardWidth = boardWidth * scale * parseFloat(canvas.dataset.initialScale);
+                const scaledBoardHeight = boardHeight * scale * parseFloat(canvas.dataset.initialScale);
 
                 // Max translation values (board edge aligns with container edge)
-                const maxX = Math.max(0, scaledBoardWidth - containerWidth);
-                const maxY = Math.max(0, scaledBoardHeight - containerHeight);
+                // Note: The board is centered if it's smaller than the container.
+                // So, the max/min pan depends on whether the scaled board is larger or smaller than the container.
+                let minXBound = 0;
+                let maxXBound = 0;
+                let minYBound = 0;
+                let maxYBound = 0;
 
-                // Min translation values (board top/left edge aligns with container top/left edge)
-                const minX = Math.min(0, containerWidth - scaledBoardWidth);
-                const minY = Math.min(0, containerHeight - scaledBoardHeight);
-                
-                // Clamp translateX and translateY
-                // If scaledBoardWidth is less than containerWidth, center the board
-                if (scaledBoardWidth < containerWidth) {
+                if (scaledBoardWidth > containerWidth) {
+                    maxXBound = 0;
+                    minXBound = containerWidth - scaledBoardWidth;
+                } else {
+                    // If scaled board is smaller than container, center it
                     translateX = (containerWidth - scaledBoardWidth) / 2;
-                } else {
-                    translateX = Math.max(-maxX, Math.min(0, translateX));
+                    minXBound = translateX;
+                    maxXBound = translateX;
                 }
 
-                if (scaledBoardHeight < containerHeight) {
-                    translateY = (containerHeight - scaledBoardHeight) / 2;
+                if (scaledBoardHeight > containerHeight) {
+                    maxYBound = 0;
+                    minYBound = containerHeight - scaledBoardHeight;
                 } else {
-                    translateY = Math.max(-maxY, Math.min(0, translateY));
+                    // If scaled board is smaller than container, center it
+                    translateY = (containerHeight - scaledBoardHeight) / 2;
+                    minYBound = translateY;
+                    maxYBound = translateY;
                 }
+                
+                translateX = Math.max(minXBound, Math.min(maxXBound, translateX));
+                translateY = Math.max(minYBound, Math.min(maxYBound, translateY));
             }
 
             canvas.addEventListener('touchstart', (event) => {
                 // Prevent default touch behavior (like scrolling)
                 event.preventDefault(); 
 
+                // Set gesture active flag
+                isGestureActive = true;
+                if (gestureTimeout) {
+                    clearTimeout(gestureTimeout);
+                    gestureTimeout = null;
+                }
+
                 if (event.touches.length === 1) {
-                    // Single touch for pan
+                    // Single touch for pan or tap
                     isDragging = true;
                     lastPanX = event.touches[0].clientX;
                     lastPanY = event.touches[0].clientY;
+                    initialTouchX = event.touches[0].clientX; // Record initial position for tap detection
+                    initialTouchY = event.touches[0].clientY; // Record initial position for tap detection
                 } else if (event.touches.length === 2) {
                     // Two touches for pinch-to-zoom
                     isDragging = false; // Disable single-finger pan if two fingers are down
@@ -1612,8 +1629,11 @@
                     // Calculate midpoint relative to canvas for zoom origin
                     const rect = canvas.getBoundingClientRect();
                     const midpoint = getMidpoint(event.touches[0], event.touches[1]);
-                    initialPinchMidX = (midpoint.x - rect.left - translateX) / scale;
-                    initialPinchMidY = (midpoint.y - rect.top - translateY) / scale;
+                    
+                    // Calculate pinchMidX/Y relative to the *original* (untransformed) canvas coordinate system
+                    // This is the point on the internal canvas that should remain under the finger midpoint
+                    initialPinchMidX = (midpoint.x - rect.left - translateX) / (scale * parseFloat(canvas.dataset.initialScale));
+                    initialPinchMidY = (midpoint.y - rect.top - translateY) / (scale * parseFloat(canvas.dataset.initialScale));
                 }
             }, { passive: false }); // Use passive: false to allow preventDefault
 
@@ -1646,8 +1666,9 @@
                     const currentMidpoint = getMidpoint(event.touches[0], event.touches[1]);
 
                     // Adjust translateX and translateY based on the new scale and pinch origin
-                    translateX = currentMidpoint.x - rect.left - (initialPinchMidX * newScale);
-                    translateY = currentMidpoint.y - rect.top - (initialPinchMidY * newScale);
+                    // The formula is: current_midpoint_on_screen - (initial_midpoint_on_internal_canvas * new_total_scale)
+                    translateX = currentMidpoint.x - rect.left - (initialPinchMidX * newScale * parseFloat(canvas.dataset.initialScale));
+                    translateY = currentMidpoint.y - rect.top - (initialPinchMidY * newScale * parseFloat(canvas.dataset.initialScale));
 
                     scale = newScale;
                     clampPan();
@@ -1661,37 +1682,126 @@
                 clampPan(); // Final clamp after gesture ends
                 applyTransform();
                 
-                // If no touches remain, it means a tap might have occurred
-                if (event.touches.length === 0 && event.changedTouches.length === 1) {
-                    // This handles the tap for placing a piece after pan/zoom
-                    // Need to check if it was truly a tap and not a drag
-                    // A simple way is to check if the distance moved was minimal
-                    // For now, we'll rely on the click event for piece placement
+                // Check if it was a tap (single finger, minimal movement)
+                if (event.changedTouches.length === 1 && event.touches.length === 0) {
+                    const releasedTouch = event.changedTouches[0];
+                    const deltaX = releasedTouch.clientX - initialTouchX;
+                    const deltaY = releasedTouch.clientY - initialTouchY;
+                    const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                    if (moveDistance < tapThreshold) {
+                        // This was a tap, process it as a piece placement
+                        const rect = canvas.getBoundingClientRect();
+                        const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                        
+                        // Get tap coordinates relative to the canvas *display* area
+                        const clientX = releasedTouch.clientX;
+                        const clientY = releasedTouch.clientY;
+
+                        // Step 1: Get coordinates relative to the canvas element's CSS display box (after transform)
+                        const clickXOnDisplay = clientX - rect.left;
+                        const clickYOnDisplay = clientY - rect.top;
+
+                        // Step 2: Reverse the CSS transform (translate and scale) to get coordinates on the
+                        // canvas element's *initial* scaled display size (before user zoom/pan)
+                        const transformedX = (clickXOnDisplay - translateX) / scale;
+                        const transformedY = (clickYOnDisplay - translateY) / scale;
+
+                        // Step 3: Reverse the initial responsive scaling to get coordinates on the
+                        // internal canvas drawing resolution (where BOARD_PADDING and CELL_SIZE apply)
+                        const internalCanvasX = transformedX / initialScaleFactor;
+                        const internalCanvasY = transformedY / initialScaleFactor;
+
+                        // Step 4: Map to board grid coordinates
+                        const x = Math.round((internalCanvasX - BOARD_PADDING) / CELL_SIZE);
+                        const y = Math.round((internalCanvasY - BOARD_PADDING) / CELL_SIZE);
+                        
+                        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                            handlePlayerMove(x, y);
+                        }
+                        isGestureActive = false; // Tap processed, allow next tap immediately
+                    } else {
+                        // This was a drag/pan, not a tap. Set a timeout to allow subsequent taps.
+                        gestureTimeout = setTimeout(() => {
+                            isGestureActive = false;
+                        }, 150); // 150ms delay for stability
+                    }
+                } else {
+                    // If multiple touches were involved (pinch) or no touches were released,
+                    // still use the timeout to ensure stability before next interaction.
+                    gestureTimeout = setTimeout(() => {
+                        isGestureActive = false;
+                    }, 150); // 150ms delay for stability
                 }
             });
 
-            // Handle board click event (adjusted for zoom and pan)
-            canvas.addEventListener('click', (event) => {
-                const rect = canvas.getBoundingClientRect();
-                
-                // Get click coordinates relative to the canvas *display* area
-                const clientX = event.clientX;
-                const clientY = event.clientY;
+            // Removed the original canvas.addEventListener('click', ...)
+            // Mouse clicks on desktop will still work because touchstart/touchend won't fire.
+            // For a unified approach, you could also convert mouse clicks to use this tap logic,
+            // but for now, the browser's default click behavior for mouse is usually fine.
+            canvas.addEventListener('mousedown', (event) => {
+                // For desktop mouse clicks, we can still use the click event or simulate tap
+                // For simplicity, we'll let the browser handle mouse clicks as before,
+                // as the touch logic is primarily for mobile.
+                // If you want to unify, you'd add similar logic here to track mouse down/up.
+                isGestureActive = true; // Block immediate clicks while mouse is down
+                lastPanX = event.clientX;
+                lastPanY = event.clientY;
+                initialTouchX = event.clientX;
+                initialTouchY = event.clientY;
+            });
 
-                // Calculate coordinates relative to the transformed (zoomed/panned) canvas
-                // This is the crucial part: reverse the transform to get original canvas coordinates
-                const transformedX = (clientX - rect.left - translateX) / scale;
-                const transformedY = (clientY - rect.top - translateY) / scale;
+            canvas.addEventListener('mouseup', (event) => {
+                const deltaX = event.clientX - initialTouchX;
+                const deltaY = event.clientY - initialTouchY;
+                const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-                // Map to board grid coordinates
-                const x = Math.round((transformedX - BOARD_PADDING) / CELL_SIZE);
-                const y = Math.round((transformedY - BOARD_PADDING) / CELL_SIZE);
-                
-                if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                    handlePlayerMove(x, y);
+                if (moveDistance < tapThreshold) {
+                    // This was a tap (for mouse)
+                    const rect = canvas.getBoundingClientRect();
+                    const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                    
+                    const clickXOnDisplay = event.clientX - rect.left;
+                    const clickYOnDisplay = event.clientY - rect.top;
+
+                    const transformedX = (clickXOnDisplay - translateX) / scale;
+                    const transformedY = (clickYOnDisplay - translateY) / scale;
+
+                    const internalCanvasX = transformedX / initialScaleFactor;
+                    const internalCanvasY = transformedY / initialScaleFactor;
+
+                    const x = Math.round((internalCanvasX - BOARD_PADDING) / CELL_SIZE);
+                    const y = Math.round((internalCanvasY - BOARD_PADDING) / CELL_SIZE);
+                    
+                    if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                        handlePlayerMove(x, y);
+                    }
+                }
+                isGestureActive = false; // Allow next click/tap
+            });
+
+            canvas.addEventListener('mousemove', (event) => {
+                if (event.buttons === 1) { // If left mouse button is down
+                    const currentX = event.clientX;
+                    const currentY = event.clientY;
+
+                    translateX += (currentX - lastPanX);
+                    translateY += (currentY - lastPanY);
+
+                    lastPanX = currentX;
+                    lastPanY = currentY;
+
+                    clampPan();
+                    applyTransform();
+                    isGestureActive = true; // Keep gesture active during mouse drag
                 }
             });
-            
+
+            canvas.addEventListener('mouseout', () => {
+                // If mouse leaves canvas while dragging, reset state
+                isGestureActive = false;
+            });
+
             // Re-adjust board on window resize
             let resizeTimeout;
             window.addEventListener('resize', () => {
