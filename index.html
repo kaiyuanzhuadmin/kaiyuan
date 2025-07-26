@@ -5,13 +5,117 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%238B5A2B'><circle cx='50' cy='50' r='40' fill='white' stroke='%238B5A2B' stroke-width='4'/><circle cx='50' cy='50' r='10' fill='%238B5A2B'/></svg>" type="image/svg+xml">
-    <link href="style.css" rel="stylesheet">
+    
+    <!-- 所有CSS样式都直接内联在此处，模拟Tailwind的实用类 -->
     <style>
-        /* CSS 变量，用于棋子颜色 */
+        /* 定义CSS变量，用于棋子颜色，以便在JavaScript中动态获取 */
         :root {
-            --player: #000000;
-            --opponent: #FFFFFF;
+            --player: #000000; /* 默认玩家1 (黑棋) */
+            --opponent: #FFFFFF; /* 默认玩家2/AI (白棋) */
+            --primary: #8B5A2B;
+            --secondary: #D2B48C;
+            --accent: #FF69B4;
+            --board: #DEB887;
+            --highlight: #FF69B4;
         }
+
+        /* 基础样式和颜色定义 */
+        .bg-gradient-to-br { background-image: linear-gradient(to bottom right, var(--amber-50), var(--orange-100)); }
+        .from-amber-50 { --amber-50: #fffdfa; }
+        .to-orange-100 { --orange-100: #fff9f2; }
+        .min-h-screen { min-height: 100vh; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .p-4 { padding: 1rem; }
+        .font-sans { font-family: 'Inter', 'system-ui', 'sans-serif'; }
+        .max-w-4xl { max-width: 56rem; /* 896px */ }
+        .w-full { width: 100%; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+        .bg-white { background-color: #ffffff; }
+        .rounded-xl { border-radius: 0.75rem; /* 12px */ }
+        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .overflow-hidden { overflow: hidden; }
+
+        /* Header 样式 */
+        .bg-primary { background-color: var(--primary); }
+        .text-white { color: #ffffff; }
+        .text-center { text-align: center; }
+        .text-clamp-1 { font-size: clamp(1.8rem, 5vw, 2.5rem); } /* text-[clamp(1.8rem,5vw,2.5rem)] */
+        .font-bold { font-weight: 700; }
+        .tracking-wide { letter-spacing: 0.025em; }
+        .mt-2 { margin-top: 0.5rem; }
+        .text-secondary-90 { color: rgba(var(--secondary), 0.9); } /* text-secondary/90 */
+        .text-clamp-2 { font-size: clamp(1rem, 2vw, 1.2rem); } /* text-[clamp(1rem,2vw,1.2rem)] */
+
+        /* Main 区域样式 */
+        .p-6 { padding: 1.5rem; }
+        .gap-8 { gap: 2rem; }
+        .md\:p-8 { /* media query for md:p-8 */ }
+        .md\:flex-row { /* media query for md:flex-row */ }
+        .md\:gap-8 { /* media query for md:gap-8 */ }
+
+        /* 信息和控制区样式 */
+        .md\:w-1\/4 { /* media query for md:w-1/4 */ }
+        .gap-6 { gap: 1.5rem; }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .rounded-lg { border-radius: 0.5rem; /* 8px */ }
+        .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .text-xl { font-size: 1.25rem; /* 20px */ }
+        .text-gray-800 { color: #1f2937; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mr-2 { margin-right: 0.5rem; }
+        .space-y-4 > *:not([hidden]) ~ *:not([hidden]) { margin-top: 1rem; } /* space-y-4 */
+        .text-gray-600 { color: #4b5563; }
+        .text-sm { font-size: 0.875rem; /* 14px */ }
+        .mt-1 { margin-top: 0.25rem; }
+        .w-5 { width: 1.25rem; }
+        .h-5 { height: 1.25rem; }
+        .rounded-full { border-radius: 9999px; }
+        .bg-player { background-color: var(--player); }
+        .border-2 { border-width: 2px; }
+        .border-gray-300 { border-color: #d1d5db; }
+        .piece-shadow { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .font-medium { font-weight: 500; }
+        .hidden { display: none; }
+        .space-y-3 > *:not([hidden]) ~ *:not([hidden]) { margin-top: 0.75rem; } /* space-y-3 */
+        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .text-gray-700 { color: #374151; }
+        .transition-all { transition-property: all; }
+        .duration-300 { transition-duration: 300ms; }
+        .hover\:bg-primary-90:hover { background-color: rgba(var(--primary), 0.9); } /* hover:bg-primary/90 */
+        .bg-gray-200 { background-color: #e5e7eb; }
+        .hover\:bg-gray-300:hover { background-color: #d1d5db; } /* hover:bg-gray-300 */
+        .space-y-2 > *:not([hidden]) ~ *:not([hidden]) { margin-top: 0.5rem; } /* space-y-2 */
+        .items-start { align-items: flex-start; }
+        .italic { font-style: italic; }
+
+        /* 棋盘区域样式 */
+        .md\:w-3\/4 { /* media query for md:w-3/4 */ }
+        .relative { position: relative; }
+        .board-shadow { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); }
+        .bg-board { background-color: var(--board); }
+        .absolute { position: absolute; }
+        .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+        .bg-black-40 { background-color: rgba(0, 0, 0, 0.4); } /* bg-black/40 */
+        .mb-3 { margin-bottom: 0.75rem; }
+        .w-3 { width: 0.75rem; }
+        .h-3 { height: 0.75rem; }
+        .mx-1 { margin-left: 0.25rem; margin-right: 0.25rem; }
+        .thinking-indicator { animation: thinking 1.5s infinite; }
+        @keyframes thinking {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .mt-6 { margin-top: 1.5rem; }
+        .h-32 { height: 8rem; }
+        .overflow-y-auto { overflow-y: auto; }
+
+        /* Footer 样式 */
+        .bg-gray-800 { background-color: #1f2937; }
+
         /* 模态框样式 */
         .modal {
             display: none;
@@ -45,24 +149,28 @@
             text-decoration: none;
             cursor: pointer;
         }
-        /* AI思考指示器动画 */
-        .thinking-indicator {
-            animation: thinking 1.5s infinite;
-        }
-        @keyframes thinking {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
+
+        /* 媒体查询 - 模拟 Tailwind 的 md 断点 */
+        @media (min-width: 768px) {
+            .md\:p-8 { padding: 2rem; }
+            .md\:flex-row { flex-direction: row; }
+            .md\:gap-8 { gap: 2rem; }
+            .md\:w-1\/4 { width: 25%; }
+            .md\:w-3\/4 { width: 75%; }
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-amber-50 to-orange-100 min-h-screen flex flex-col items-center justify-center p-4 font-sans">
     <div class="max-w-4xl w-full mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
+        <!-- 游戏标题 -->
         <header class="bg-primary text-white p-6 text-center">
-            <h1 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold tracking-wide">五子棋对弈</h1>
-            <p class="mt-2 text-secondary/90 text-[clamp(1rem,2vw,1.2rem)]">来场挑战，看谁能先连成五子/•᷅•᷄\୭~   </p>
+            <h1 class="text-clamp-1 font-bold tracking-wide">五子棋对弈</h1>
+            <p class="mt-2 text-secondary-90 text-clamp-2">来场挑战，看谁能先连成五子/•᷅•᷄\୭~   </p>
         </header>
 
+        <!-- 游戏区域 -->
         <main class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
+            <!-- 游戏信息和控制区 -->
             <div class="w-full md:w-1/4 flex flex-col gap-6">
                 <div class="bg-gray-50 p-5 rounded-lg shadow-md">
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -95,7 +203,7 @@
                         <span class="mr-2">⚙️</span>游戏控制
                     </h2>
                     <div class="space-y-3">
-                        <button id="new-game" class="w-full bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
+                        <button id="new-game" class="w-full bg-primary hover:bg-primary-90 text-white py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
                             <span class="mr-2">🔄</span>新游戏
                         </button>
                         <button id="undo" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
@@ -127,11 +235,12 @@
                 </div>
             </div>
 
+            <!-- 棋盘区域 -->
             <div class="w-full md:w-3/4 flex flex-col items-center">
                 <div class="relative">
                     <div id="board-container" class="board-shadow rounded-lg overflow-hidden relative">
                         <canvas id="board" class="bg-board"></canvas>
-                        <div id="thinking" class="absolute inset-0 bg-black/40 flex items-center justify-center hidden">
+                        <div id="thinking" class="absolute inset-0 bg-black-40 flex items-center justify-center hidden">
                             <div class="bg-white p-6 rounded-lg text-center">
                                 <div class="flex justify-center mb-3">
                                     <div class="w-3 h-3 rounded-full bg-primary mx-1 thinking-indicator"></div>
@@ -155,11 +264,13 @@
             </div>
         </main>
 
+        <!-- 页脚 -->
         <footer class="bg-gray-800 text-white p-4 text-center text-sm">
             <p>五子棋游戏 &copy; 2025 | Designed by 开元 </p>
         </footer>
     </div>
 
+    <!-- 胜利提示模态框 -->
     <div id="winner-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -168,8 +279,10 @@
         </div>
     </div>
 
+    <!-- 添加音频元素 -->
     <audio id="music" src="jasmine_flower.mp3" loop></audio>
 
+    <!-- AI Worker Script -->
     <script id="ai-worker" type="javascript/worker">
         // AI Worker: Minimax with Alpha-Beta Pruning
         self.onmessage = function(e) {
@@ -511,7 +624,7 @@
                 ctx.clearRect(0, 0, size, size);
                 
                 // Draw board background
-                ctx.fillStyle = '#DEB887';
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--board').trim();
                 ctx.fillRect(0, 0, size, size);
                 
                 // Draw grid lines
@@ -621,7 +734,7 @@
                 
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#FF69B4'; // Use bright pink as marker color
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--highlight').trim(); // Use bright pink as marker color
                 ctx.fill();
             }
             
