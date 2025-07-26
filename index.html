@@ -1423,19 +1423,19 @@
                 if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 80000; // Broken Four (can still win) (increased)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 20000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 10000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 50000; // Medium-high (increased)
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 30000; // Broken Live Three (increased)
 
                 // Blocked Three (can become blocked four)
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 5000; // Medium (increased)
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 1000; // (increased)
+                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 8000; // Medium (increased)
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 4000; // (increased)
 
                 // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 500; // Low-medium (increased)
-                if (pattern.includes('__P_P__')) return 200; // (increased)
+                if (pattern.includes('__PP__')) return 800; // Low-medium (increased)
+                if (pattern.includes('__P_P__')) return 400; // (increased)
 
                 // Blocked Two
-                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 100; // (increased)
+                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 200; // (increased)
                 
                 return 1; // Default score for empty or insignificant patterns
             }
