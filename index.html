@@ -569,6 +569,13 @@
             const INTERNAL_CANVAS_WIDTH = (BOARD_SIZE - 1) * INTERNAL_DRAWING_CELL_SIZE + INTERNAL_DRAWING_BOARD_PADDING * 2;
             const INTERNAL_CANVAS_HEIGHT = INTERNAL_CANVAS_WIDTH; // Board is square
 
+            // Auto-zoom/pan constants for mobile
+            const IS_MOBILE = window.innerWidth < 768; // Simple mobile detection
+            const IDLE_TIMEOUT_MS = 3000; // 3 seconds idle for auto-fit
+            const AUTO_FIT_ANIMATION_DURATION = 500; // 0.5 seconds for auto-fit animation
+            const INITIAL_MOBILE_VISIBLE_CELLS = 8; // How many cells to show initially on mobile (e.g., 8x8 area)
+            const OPTIMAL_VIEW_PADDING_CELLS = 2; // Padding around pieces for optimal view
+
             // Game state
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
             let currentPlayer = 1; // 1: Black, 2: White
@@ -579,7 +586,28 @@
             let gameMode = 1; // 1: Player vs AI, 2: Player vs Player
             let gameCount = 1; // Game count
             let playerStartsWithBlack = true; // Does player start with black?
-            let undoChances = 0; // New: Undo chances
+            let undoChances = 0;
+
+            // Auto-zoom/pan variables
+            let scale = 1.0;
+            let translateX = 0;
+            let translateY = 0;
+            let isDragging = false;
+            let lastPanX = 0;
+            let lastPanY = 0;
+            let initialPinchDistance = 0;
+            let initialPinchScale = 1;
+            let initialPinchMidX = 0;
+            let initialPinchMidY = 0;
+            let isGestureActive = false; // Flag to indicate if a user zoom/pan gesture is active
+            let gestureTimeout = null;
+            let initialTouchX = 0;
+            let initialTouchY = 0;
+            const tapThreshold = 10;
+
+            let idleTimer = null;
+            let autoFitAnimationId = null;
+            let autoFitStartTime = 0;
             
             // DOM elements
             const canvas = document.getElementById('board');
@@ -613,38 +641,21 @@
             // AI difficulty configuration
             const difficultyConfig = {
                 1: { // Easy
-                    searchDepth: 2, // Shallow search depth
-                    randomMoveChance: 0.4, // High chance of making a random move
+                    searchDepth: 2,
+                    randomMoveChance: 0.4,
                     thinkTimeRange: [200, 1000]
                 },
                 2: { // Medium
-                    searchDepth: 4, // Medium search depth (increased from 3 to 4 for more challenge)
-                    randomMoveChance: 0.1, // Low chance of making a random move
+                    searchDepth: 4,
+                    randomMoveChance: 0.1,
                     thinkTimeRange: [500, 3500]
                 },
                 3: { // Hard
-                    searchDepth: 5, // Deeper search depth for stronger play (reduced from 6 to 5 for performance)
-                    randomMoveChance: 0.0, // No random moves, always best
+                    searchDepth: 5,
+                    randomMoveChance: 0.0,
                     thinkTimeRange: [800, 5500]
                 }
             };
-
-            // Zoom and Pan variables
-            let scale = 1.0; // Current zoom level
-            let translateX = 0; // Current pan X offset
-            let translateY = 0; // Current pan Y offset
-            let isDragging = false; // Flag for single-finger pan
-            let lastPanX = 0; // Last X position for pan
-            let lastPanY = 0; // Last Y position for pan
-            let initialPinchDistance = 0; // Initial distance between two fingers for zoom
-            let initialPinchScale = 1; // Scale at the start of pinch gesture
-            let initialPinchMidX = 0; // Midpoint X at the start of pinch gesture
-            let initialPinchMidY = 0; // Midpoint Y at the start of pinch gesture
-            let isGestureActive = false; // Flag to indicate if a zoom/pan gesture is active
-            let gestureTimeout = null; // Timeout for resetting isGestureActive
-            let initialTouchX = 0; // For tap detection
-            let initialTouchY = 0; // For tap detection
-            const tapThreshold = 10; // Max distance for a touch to be considered a tap (in pixels)
 
             // Set Canvas internal drawing size once
             canvas.width = INTERNAL_CANVAS_WIDTH;
@@ -669,11 +680,17 @@
                 boardContainer.style.width = `${maxDisplaySize}px`;
                 boardContainer.style.height = `${maxDisplaySize}px`;
 
-                // Reset zoom and pan on resize or init
-                scale = 1.0;
-                translateX = 0;
-                translateY = 0;
-                applyTransform();
+                // On resize, if not mobile or at game start, reset zoom/pan
+                if (!IS_MOBILE || moveHistory.length === 0) {
+                    scale = 1.0;
+                    translateX = 0;
+                    translateY = 0;
+                    clampPan();
+                    applyTransform();
+                } else {
+                    // On mobile resize, re-evaluate optimal view to adjust to new container size
+                    updateDynamicZoom(); 
+                }
             }
 
             // Apply CSS transform for zoom and pan
@@ -694,6 +711,34 @@
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
                 
+                if (IS_MOBILE) {
+                    // Mobile: Initial zoom to 8x8 area centered
+                    const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                    const targetVisibleCells = INITIAL_MOBILE_VISIBLE_CELLS; 
+                    const targetInternalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
+
+                    // Calculate scale to fit targetVisibleCells into container width
+                    scale = (boardContainer.clientWidth / initialScaleFactor) / targetInternalWidth;
+                    // Clamp initial scale, ensuring it doesn't zoom out too much or zoom in too little
+                    scale = Math.max(1.0, Math.min(scale, 3.0)); 
+                    
+                    // Center the entire board (which will center the 8x8 view due to the scale)
+                    const currentDisplayWidth = INTERNAL_CANVAS_WIDTH * scale * initialScaleFactor;
+                    const currentDisplayHeight = INTERNAL_CANVAS_HEIGHT * scale * initialScaleFactor;
+
+                    translateX = (boardContainer.clientWidth - currentDisplayWidth) / 2;
+                    translateY = (boardContainer.clientHeight - currentDisplayHeight) / 2;
+                    clampPan();
+                    applyTransform();
+                } else {
+                    // Desktop: Ensure full board is visible and centered
+                    scale = 1.0;
+                    translateX = 0;
+                    translateY = 0;
+                    clampPan();
+                    applyTransform();
+                }
+
                 if (playerStartsWithBlack) {
                     logMessage('玩家执黑先手，请点击棋盘落子');
                 } else {
@@ -707,8 +752,9 @@
                 }
                 
                 winnerModal.style.display = 'none';
-                updateUndoChancesDisplay(); // Update undo chances display
-                drawBoard(); // Redraw board after initialization
+                updateUndoChancesDisplay();
+                drawBoard();
+                resetIdleTimer(); // Start idle timer
             }
             
             // Draw board
@@ -953,6 +999,11 @@
                 const pieceColor = currentPlayer === 1 ? '黑' : '白';
                 logMessage(`${playerName}在(${x+1},${y+1})落${pieceColor}子`);
                 
+                // Dynamic zoom for mobile
+                if (IS_MOBILE) {
+                    updateDynamicZoom();
+                }
+
                 // Check if player wins
                 if (checkWin(x, y, currentPlayer)) {
                     gameOver = true;
@@ -985,6 +1036,7 @@
                         aiMove();
                     }
                 }
+                resetIdleTimer(); // Reset idle timer after a move
             }
             
             // AI move
@@ -1023,6 +1075,11 @@
                         const aiName = getPlayerName(currentPlayer);
                         const pieceColor = currentPlayer === 1 ? '黑' : '白';
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子`);
+
+                        // Dynamic zoom for mobile
+                        if (IS_MOBILE) {
+                            updateDynamicZoom();
+                        }
                         
                         // Check if AI wins
                         if (checkWin(x, y, currentPlayer)) {
@@ -1047,10 +1104,9 @@
                         currentPlayer = currentPlayer === 1 ? 2 : 1;
                         updateGameStatus();
                     } else if (!move && !gameOver) {
-                        // If no best move found (e.g., board is full or no valid moves)
-                        // This case should ideally be caught by isBoardFull() earlier
                         console.warn("AI could not find a move, or game is already over.");
                     }
+                    resetIdleTimer(); // Reset idle timer after AI move
                 }, thinkTime);
             }
             
@@ -1574,43 +1630,170 @@
                 translateY = Math.max(minYBound, Math.min(maxYBound, translateY));
             }
 
-            canvas.addEventListener('touchstart', (event) => {
-                event.preventDefault(); 
+            // --- Auto-Fit and Idle Logic ---
+            function resetIdleTimer() {
+                if (!IS_MOBILE) return; // Only for mobile
+                clearTimeout(idleTimer);
+                if (autoFitAnimationId) {
+                    cancelAnimationFrame(autoFitAnimationId);
+                    autoFitAnimationId = null;
+                }
+                // isGestureActive is managed by touch/mouse events, not by idle timer directly
+                idleTimer = setTimeout(startAutoFit, IDLE_TIMEOUT_MS);
+            }
 
-                isGestureActive = true;
-                if (gestureTimeout) {
-                    clearTimeout(gestureTimeout);
-                    gestureTimeout = null;
+            // Helper function to get bounding box of all placed pieces
+            function getPieceBoundingBox() {
+                if (moveHistory.length === 0) {
+                    // If no pieces, return center of the board with a small default bounding box
+                    // This ensures initial zoom focuses on the center
+                    const mid = Math.floor(BOARD_SIZE / 2);
+                    return { minX: mid, maxX: mid, minY: mid, maxY: mid };
+                }
+
+                let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
+                for (const move of moveHistory) {
+                    minX = Math.min(minX, move.x);
+                    maxX = Math.max(maxX, move.x);
+                    minY = Math.min(minY, move.y);
+                    maxY = Math.max(maxY, move.y);
+                }
+                return { minX, maxX, minY, maxY };
+            }
+
+            // Helper function to calculate optimal view (scale and pan) for a given bounding box
+            function calculateOptimalView(boundingBox) {
+                const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                const containerWidth = boardContainer.clientWidth;
+                const containerHeight = boardContainer.clientHeight;
+
+                // Add padding around the bounding box of pieces
+                const contentMinX = Math.max(0, boundingBox.minX - OPTIMAL_VIEW_PADDING_CELLS);
+                const contentMaxX = Math.min(BOARD_SIZE - 1, boundingBox.maxX + OPTIMAL_VIEW_PADDING_CELLS);
+                const contentMinY = Math.max(0, boundingBox.minY - OPTIMAL_VIEW_PADDING_CELLS);
+                const contentMaxY = Math.min(BOARD_SIZE - 1, boundingBox.maxY + OPTIMAL_VIEW_PADDING_CELLS);
+
+                // Calculate internal drawing dimensions of the content area
+                const contentInternalWidth = (contentMaxX - contentMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
+                const contentInternalHeight = (contentMaxY - contentMinY + 1) * INTERNAL_DRAWING_CELL_SIZE;
+
+                // Calculate required scale to fit content within container's display area
+                let targetScaleX = containerWidth / (contentInternalWidth * initialScaleFactor);
+                let targetScaleY = containerHeight / (contentInternalHeight * initialScaleFactor);
+                let newScale = Math.min(targetScaleX, targetScaleY);
+
+                // Clamp newScale to reasonable bounds (e.g., between 1.0 and 3.0)
+                // 1.0 means full board visible, 3.0 means 3x zoom
+                newScale = Math.max(1.0, Math.min(newScale, 3.0));
+
+                // Calculate center of the content area on the internal canvas
+                const centerInternalX = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinX + contentMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                const centerInternalY = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinY + contentMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+
+                // Calculate target display coordinates of this center
+                const targetDisplayCenterX = centerInternalX * newScale * initialScaleFactor;
+                const targetDisplayCenterY = centerInternalY * newScale * initialScaleFactor;
+
+                // Calculate translation to center this target display center within the container
+                const newTranslateX = containerWidth / 2 - targetDisplayCenterX;
+                const newTranslateY = containerHeight / 2 - targetDisplayCenterY;
+
+                return { scale: newScale, translateX: newTranslateX, translateY: newTranslateY };
+            }
+
+            // Function to smoothly animate to a target scale and position
+            function animateToView(targetScale, targetX, targetY) {
+                if (autoFitAnimationId) {
+                    cancelAnimationFrame(autoFitAnimationId);
+                }
+
+                const startScale = scale;
+                const startX = translateX;
+                const startY = translateY;
+                autoFitStartTime = performance.now();
+
+                function animate(currentTime) {
+                    if (!autoFitStartTime) autoFitStartTime = currentTime;
+                    const elapsedTime = currentTime - autoFitStartTime;
+                    const progress = Math.min(elapsedTime / AUTO_FIT_ANIMATION_DURATION, 1);
+                    
+                    scale = startScale + (targetScale - startScale) * progress;
+                    translateX = startX + (targetX - startX) * progress;
+                    translateY = startY + (targetY - startY) * progress;
+
+                    clampPan(); // Ensure animation steps stay within bounds
+                    applyTransform();
+
+                    if (progress < 1) {
+                        autoFitAnimationId = requestAnimationFrame(animate);
+                    } else {
+                        autoFitAnimationId = null;
+                        // Ensure final state is exactly the target
+                        scale = targetScale;
+                        translateX = targetX;
+                        translateY = targetY;
+                        clampPan();
+                        applyTransform();
+                    }
+                }
+                autoFitAnimationId = requestAnimationFrame(animate);
+            }
+
+            // Update dynamic zoom for mobile (called after each move)
+            function updateDynamicZoom() {
+                if (!IS_MOBILE) return;
+                const boundingBox = getPieceBoundingBox();
+                const optimalView = calculateOptimalView(boundingBox);
+                animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
+            }
+
+            // Start auto-fit on idle
+            function startAutoFit() {
+                if (!IS_MOBILE || isGestureActive) return; // Only for mobile and if no user interaction
+
+                const boundingBox = getPieceBoundingBox();
+                const optimalView = calculateOptimalView(boundingBox);
+                animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
+            }
+
+
+            canvas.addEventListener('touchstart', (event) => {
+                if (IS_MOBILE) {
+                    event.preventDefault(); 
+                    isGestureActive = true; // User is actively interacting
+                    clearTimeout(idleTimer); // Stop idle timer
+                    if (autoFitAnimationId) { // Stop any ongoing auto-fit animation
+                        cancelAnimationFrame(autoFitAnimationId);
+                        autoFitAnimationId = null;
+                    }
                 }
 
                 if (event.touches.length === 1) {
-                    // Single touch for pan or tap
                     isDragging = true;
                     lastPanX = event.touches[0].clientX;
                     lastPanY = event.touches[0].clientY;
-                    initialTouchX = event.touches[0].clientX; // Record initial position for tap detection
-                    initialTouchY = event.touches[0].clientY; // Record initial position for tap detection
+                    initialTouchX = event.touches[0].clientX;
+                    initialTouchY = event.touches[0].clientY;
                 } else if (event.touches.length === 2) {
-                    // Two touches for pinch-to-zoom
-                    isDragging = false; // Disable single-finger pan if two fingers are down
+                    isDragging = false;
                     initialPinchDistance = getDistance(event.touches[0], event.touches[1]);
                     initialPinchScale = scale;
                     
-                    // Calculate midpoint relative to the *transformed* canvas for zoom origin
                     const rect = canvas.getBoundingClientRect();
                     const midpoint = getMidpoint(event.touches[0], event.touches[1]);
                     
-                    // Calculate pinchMidX/Y relative to the *internal* canvas coordinate system
                     initialPinchMidX = (midpoint.x - rect.left) / (scale * parseFloat(canvas.dataset.initialScale));
                     initialPinchMidY = (midpoint.y - rect.top) / (scale * parseFloat(canvas.dataset.initialScale));
                 }
             }, { passive: false });
 
             canvas.addEventListener('touchmove', (event) => {
-                event.preventDefault(); // Prevent default touch behavior
+                if (IS_MOBILE) {
+                    event.preventDefault();
+                    isGestureActive = true; // User is actively interacting
+                }
 
                 if (event.touches.length === 1 && isDragging) {
-                    // Single touch for pan
                     const currentX = event.touches[0].clientX;
                     const currentY = event.touches[0].clientY;
 
@@ -1623,20 +1806,14 @@
                     clampPan();
                     applyTransform();
                 } else if (event.touches.length === 2) {
-                    // Two touches for pinch-to-zoom
                     const currentPinchDistance = getDistance(event.touches[0], event.touches[1]);
                     let newScale = initialPinchScale * (currentPinchDistance / initialPinchDistance);
 
-                    // Clamp scale between 1.0 (original size) and 3.0 (max zoom)
                     newScale = Math.max(1.0, Math.min(newScale, 3.0));
 
-                    // Calculate new translation to keep the pinch origin centered
                     const rect = canvas.getBoundingClientRect();
                     const currentMidpoint = getMidpoint(event.touches[0], event.touches[1]);
 
-                    // Adjust translateX and translateY based on the new scale and pinch origin
-                    // The formula is: current_midpoint_on_screen - (initial_midpoint_on_internal_canvas * new_total_scale)
-                    // We need to reverse the initial scale factor as well
                     translateX = currentMidpoint.x - rect.left - (initialPinchMidX * newScale * parseFloat(canvas.dataset.initialScale));
                     translateY = currentMidpoint.y - rect.top - (initialPinchMidY * newScale * parseFloat(canvas.dataset.initialScale));
 
@@ -1648,11 +1825,10 @@
 
             canvas.addEventListener('touchend', (event) => {
                 isDragging = false;
-                initialPinchDistance = 0; // Reset pinch state
-                clampPan(); // Final clamp after gesture ends
+                initialPinchDistance = 0;
+                clampPan();
                 applyTransform();
                 
-                // Check if it was a tap (single finger, minimal movement)
                 if (event.changedTouches.length === 1 && event.touches.length === 0) {
                     const releasedTouch = event.changedTouches[0];
                     const deltaX = releasedTouch.clientX - initialTouchX;
@@ -1660,80 +1836,66 @@
                     const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
                     if (moveDistance < tapThreshold) {
-                        // This was a tap, process it as a piece placement
                         const rect = canvas.getBoundingClientRect();
                         const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                         
-                        // Get tap coordinates relative to the canvas element's transformed display area
                         const clientX = releasedTouch.clientX;
                         const clientY = releasedTouch.clientY;
 
-                        // Calculate coordinates on the internal canvas drawing surface
-                        // This accounts for the current CSS transform (scale and translate)
                         const internalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
                         const internalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
 
-                        // Map to board grid coordinates
                         const x = Math.round((internalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
                         const y = Math.round((internalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
                         
                         if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
                             handlePlayerMove(x, y);
                         }
-                        isGestureActive = false; // Tap processed, allow next tap immediately
-                    } else {
-                        // This was a drag/pan, not a tap. Set a timeout to allow subsequent taps.
-                        gestureTimeout = setTimeout(() => {
-                            isGestureActive = false;
-                        }, 150); // 150ms delay for stability
                     }
-                } else {
-                    // If multiple touches were involved (pinch) or no touches were released,
-                    // still use the timeout to ensure stability before next interaction.
-                    gestureTimeout = setTimeout(() => {
-                        isGestureActive = false;
-                    }, 150); // 150ms delay for stability
                 }
+                resetIdleTimer(); // Reset idle timer after touch ends
+                isGestureActive = false; // Reset gesture active flag after interaction ends
             });
 
             canvas.addEventListener('mousedown', (event) => {
-                isGestureActive = true; // Block immediate clicks while mouse is down
-                lastPanX = event.clientX;
-                lastPanY = event.clientY;
-                initialTouchX = event.clientX;
-                initialTouchY = event.clientY;
+                if (!IS_MOBILE) { // Only for desktop
+                    isGestureActive = true;
+                    lastPanX = event.clientX;
+                    lastPanY = event.clientY;
+                    initialTouchX = event.clientX;
+                    initialTouchY = event.clientY;
+                }
             });
 
             canvas.addEventListener('mouseup', (event) => {
-                const deltaX = event.clientX - initialTouchX;
-                const deltaY = event.clientY - initialTouchY;
-                const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                if (!IS_MOBILE) { // Only for desktop
+                    const deltaX = event.clientX - initialTouchX;
+                    const deltaY = event.clientY - initialTouchY;
+                    const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-                if (moveDistance < tapThreshold) {
-                    // This was a tap (for mouse)
-                    const rect = canvas.getBoundingClientRect();
-                    const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
-                    
-                    const clientX = event.clientX;
-                    const clientY = event.clientY;
+                    if (moveDistance < tapThreshold) {
+                        const rect = canvas.getBoundingClientRect();
+                        const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                        
+                        const clientX = event.clientX;
+                        const clientY = event.clientY;
 
-                    // Calculate coordinates on the internal canvas drawing surface
-                    // This accounts for the current CSS transform (scale and translate)
-                    const internalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
-                    const internalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
+                        const internalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
+                        const internalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
 
-                    const x = Math.round((internalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                    const y = Math.round((internalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                    
-                    if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                        handlePlayerMove(x, y);
+                        const x = Math.round((internalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        const y = Math.round((internalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        
+                        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                            handlePlayerMove(x, y);
+                        }
                     }
+                    isGestureActive = false; // Reset gesture active flag after interaction ends
                 }
-                isGestureActive = false; // Allow next click/tap
             });
 
             canvas.addEventListener('mousemove', (event) => {
-                if (event.buttons === 1) { // If left mouse button is down
+                if (!IS_MOBILE && event.buttons === 1) { // Only for desktop and if left mouse button is down
                     const currentX = event.clientX;
                     const currentY = event.clientY;
 
@@ -1750,8 +1912,9 @@
             });
 
             canvas.addEventListener('mouseout', () => {
-                // If mouse leaves canvas while dragging, reset state
-                isGestureActive = false;
+                if (!IS_MOBILE) { // Only for desktop
+                    isGestureActive = false; // Reset gesture active flag if mouse leaves
+                }
             });
 
             // Re-adjust board on window resize
@@ -1759,8 +1922,9 @@
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
-                    calculateResponsiveDisplaySize(); // Only update CSS display size
-                    drawBoard(); // Redraw board to ensure it's crisp
+                    calculateResponsiveDisplaySize();
+                    drawBoard();
+                    resetIdleTimer(); // Reset idle timer on resize
                 }, 150);
             });
             
@@ -1786,11 +1950,9 @@
                     return;
                 }
                 
-                // For AI vs Player, undo two steps (player and AI)
-                // For Player vs Player, undo one step
                 const undoCount = gameMode === 1 ? Math.min(2, moveHistory.length) : 1;
                 
-                if (gameMode === 1) { // Only consume undo chance in PvE mode
+                if (gameMode === 1) {
                     undoChances--;
                 }
                 
@@ -1809,7 +1971,10 @@
                 updateUndoChancesDisplay();
                 logMessage(`悔棋 ${undoCount} 步`);
 
-                // If AI's turn after undo in PvE, trigger AI move
+                if (IS_MOBILE) {
+                    updateDynamicZoom(); // Adjust zoom after undo
+                }
+
                 if (gameMode === 1) {
                     const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
                                      (!playerStartsWithBlack && currentPlayer === 1);
@@ -1817,16 +1982,17 @@
                         aiMove();
                     }
                 }
+                resetIdleTimer(); // Reset idle timer after undo
             });
             
             // Difficulty toggle button event
             difficultyToggle.addEventListener('click', () => {
                 difficulty = (difficulty % 3) + 1;
                 const difficultyLevels = ['简单', '中等', '困难'];
-                // Win rates are illustrative, actual win rate depends on AI strength
                 const winRates = ['较低', '中等', '较高']; 
                 difficultyText.textContent = `${difficultyLevels[difficulty - 1]}(胜率约${winRates[difficulty - 1]})`;
                 logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]} (AI胜率约${winRates[difficulty - 1]})`);
+                resetIdleTimer(); // Reset idle timer after difficulty change
             });
             
             // Mode toggle button event
@@ -1834,23 +2000,23 @@
                 gameMode = gameMode === 1 ? 2 : 1;
                 const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
                 modeText.textContent = modeNames[gameMode - 1];
-                playerStartsWithBlack = true; // Reset to player starting with black
-                gameCount = 1; // Reset game count
+                playerStartsWithBlack = true;
+                gameCount = 1;
                 logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
-                initGame();
+                initGame(); // Re-initialize game to apply new mode settings
             });
             
             // Close modal button event
             closeModalBtn.addEventListener('click', () => {
                 winnerModal.style.display = 'none';
-                startNewGame(); // Start a new game after closing the modal
+                startNewGame();
             });
             
             // Close modal when clicking outside
             window.addEventListener('click', (event) => {
                 if (event.target === winnerModal) {
                     winnerModal.style.display = 'none';
-                    startNewGame(); // Start a new game after closing the modal
+                    startNewGame();
                 }
             });
 
@@ -1863,7 +2029,6 @@
 
             redeemCodeInput.addEventListener('input', () => {
                 const value = redeemCodeInput.value.trim();
-                // Check if 7 alphanumeric characters or Chinese characters
                 if (value.length === 7 && /^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(value)) {
                     handleRedeemCode();
                 }
