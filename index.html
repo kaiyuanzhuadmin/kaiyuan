@@ -518,16 +518,16 @@
             <div class="board-area">
                 <div class="board-container">
                     <canvas id="board"></canvas>
-                    <div id="thinking" class="thinking-overlay">
-                        <!--<div class="thinking-content">
+                    <!--<div id="thinking" class="thinking-overlay">
+                        <div class="thinking-content">
                             <div class="thinking-dots">
                                 <div class="thinking-dot"></div>
                                 <div class="thinking-dot"></div>
                                 <div class="thinking-dot"></div>
                             </div>
-                            <p style="color: #8B5A2B; font-weight: bold;">开元Thinking...</p>
-                        </div>-->
-                    </div>
+                            <p style="color: #8B5A2B; font-weight: bold;">开元思考中...</p>
+                        </div>
+                    </div>-->
                 </div>
 
                 <div class="game-log">
@@ -1995,8 +1995,8 @@
                 difficulty = (difficulty % 3) + 1;
                 const difficultyLevels = ['简单', '中等', '困难'];
                 const winRates = ['较低', '中等', '较高']; 
-                difficultyText.textContent = `${difficultyLevels[difficulty - 1]}(胜率约${winRates[difficulty - 1]})`;
-                logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]} (AI胜率约${winRates[difficulty - 1]})`);
+                difficultyText.textContent = `${difficultyLevels[difficulty - 1]}(胜率${winRates[difficulty - 1]})`;
+                logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]} (开元胜率${winRates[difficulty - 1]})`);
                 resetIdleTimer(); // Reset idle timer after difficulty change
             });
             
