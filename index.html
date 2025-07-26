@@ -618,7 +618,7 @@
             const undoBtn = document.getElementById('undo');
             const undoChancesDisplay = document.getElementById('undo-chances'); // New
             const difficultyToggle = document.getElementById('difficulty-toggle');
-            const difficultyText = document.getElementById('difficulty.text');
+            const difficultyText = document.getElementById('difficulty-text'); // Corrected ID
             const gameLog = document.getElementById('game-log');
             const thinkingIndicator = document.getElementById('thinking');
             const modeToggle = document.getElementById('mode-toggle');
@@ -742,13 +742,16 @@
                 const size = (BOARD_SIZE - 1) * CELL_SIZE + BOARD_PADDING * 2;
                 ctx.clearRect(0, 0, size, size);
                 
-                // Draw board background
-                ctx.fillStyle = '#DEB887';
+                // Draw board background with a subtle wood texture effect
+                const boardGradient = ctx.createLinearGradient(0, 0, size, size);
+                boardGradient.addColorStop(0, '#DEB887'); // Light wood
+                boardGradient.addColorStop(1, '#C19A6B'); // Darker wood
+                ctx.fillStyle = boardGradient;
                 ctx.fillRect(0, 0, size, size);
                 
-                // Draw grid lines
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 1;
+                // Draw grid lines with a slightly darker, more defined color
+                ctx.strokeStyle = '#8B4513'; // Darker brown for lines
+                ctx.lineWidth = 1.5; // Slightly thicker lines for better visibility
                 
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     // Horizontal lines
@@ -764,7 +767,7 @@
                     ctx.stroke();
                 }
                 
-                // Draw star points
+                // Draw star points with a slight shadow for depth
                 const starPoints = [
                     {x: 3, y: 3}, {x: 3, y: 11}, 
                     {x: 7, y: 7}, // Center point
@@ -792,15 +795,22 @@
                 }
             }
             
-            // Draw star point
+            // Draw star point with improved aesthetics
             function drawStarPoint(x, y) {
                 const centerX = BOARD_PADDING + x * CELL_SIZE;
                 const centerY = BOARD_PADDING + y * CELL_SIZE;
                 const radius = 4;
                 
+                // Draw a subtle shadow
+                ctx.beginPath();
+                ctx.arc(centerX + 1, centerY + 1, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fill();
+
+                // Draw the star point itself
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#8B4513';
+                ctx.fillStyle = '#8B4513'; // Darker brown
                 ctx.fill();
             }
             
@@ -874,7 +884,7 @@
                 requestAnimationFrame(animate);
             }
             
-            // Draw marker for the last move
+            // Draw marker for the last move with a more distinct look
             function drawLastMoveMarker(x, y) {
                 const centerX = BOARD_PADDING + x * CELL_SIZE;
                 const centerY = BOARD_PADDING + y * CELL_SIZE;
@@ -882,8 +892,12 @@
                 
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#FF69B4'; // Bright pink marker
+                ctx.fillStyle = '#FF4500'; // Orange-red marker for better contrast
+                ctx.shadowColor = 'rgba(255, 69, 0, 0.7)'; // Glow effect
+                ctx.shadowBlur = 8; // Blur for the glow
                 ctx.fill();
+                ctx.shadowColor = 'transparent'; // Reset shadow
+                ctx.shadowBlur = 0; // Reset shadow
             }
             
             // Check for win
