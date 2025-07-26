@@ -5,93 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>五子棋对弈</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%238B5A2B'><circle cx='50' cy='50' r='40' fill='white' stroke='%238B5A2B' stroke-width='4'/><circle cx='50' cy='50' r='10' fill='%238B5A2B'/></svg>" type="image/svg+xml">
-    <script src="style.css"></script>
-    <!-- Removed Font Awesome CDN as per request to reduce external links -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#8B5A2B',
-                        secondary: '#D2B48C',
-                        accent: '#FF69B4',
-                        board: '#DEB887',
-                        opponent: '#FFFFFF',
-                        player: '#000000',
-                        highlight: '#FF69B4'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                }
-            }
+    <link href="style.css" rel="stylesheet">
+    <style>
+        /* CSS 变量，用于棋子颜色 */
+        :root {
+            --player: #000000;
+            --opponent: #FFFFFF;
         }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .board-shadow {
-                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-            }
-            .piece-shadow {
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            .thinking-indicator {
-                animation: thinking 1.5s infinite;
-            }
-            @keyframes thinking {
-                0%, 100% { opacity: 0.3; }
-                50% { opacity: 1; }
-            }
-            /* 模态框样式 */
-            .modal {
-                display: none;
-                position: fixed;
-                z-index: 1;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                overflow: auto;
-                background-color: rgba(0, 0, 0, 0.4);
-            }
-            .modal-content {
-                background-color: #fefefe;
-                margin: 15% auto;
-                padding: 20px;
-                border: 1px solid #888;
-                width: 300px;
-                border-radius: 8px;
-                text-align: center;
-            }
-            .close {
-                color: #aaa;
-                float: right;
-                font-size: 28px;
-                font-weight: bold;
-            }
-            .close:hover,
-            .close:focus {
-                color: black;
-                text-decoration: none;
-                cursor: pointer;
-            }
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 300px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* AI思考指示器动画 */
+        .thinking-indicator {
+            animation: thinking 1.5s infinite;
+        }
+        @keyframes thinking {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-amber-50 to-orange-100 min-h-screen flex flex-col items-center justify-center p-4 font-sans">
     <div class="max-w-4xl w-full mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
-        <!-- 游戏标题 -->
         <header class="bg-primary text-white p-6 text-center">
             <h1 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold tracking-wide">五子棋对弈</h1>
             <p class="mt-2 text-secondary/90 text-[clamp(1rem,2vw,1.2rem)]">来场挑战，看谁能先连成五子/•᷅•᷄\୭~   </p>
         </header>
 
-        <!-- 游戏区域 -->
         <main class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
-            <!-- 游戏信息和控制区 -->
             <div class="w-full md:w-1/4 flex flex-col gap-6">
                 <div class="bg-gray-50 p-5 rounded-lg shadow-md">
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -130,11 +101,9 @@
                         <button id="undo" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
                             <span class="mr-2">↩️</span>悔棋
                         </button>
-                        <!-- 难度切换按钮已移除 -->
                         <button id="mode-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
                             <span class="mr-2">👥</span>模式: <span id="mode-text">玩家 vs 开元</span>
                         </button>
-                        <!-- 添加音乐播放/暂停按钮 -->
                         <button id="music-toggle" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-all duration-300 flex items-center justify-center">
                             <span class="mr-2" id="music-icon">🎵</span>音乐: <span id="music-text">暂停</span>
                         </button>
@@ -158,7 +127,6 @@
                 </div>
             </div>
 
-            <!-- 棋盘区域 -->
             <div class="w-full md:w-3/4 flex flex-col items-center">
                 <div class="relative">
                     <div id="board-container" class="board-shadow rounded-lg overflow-hidden relative">
@@ -187,13 +155,11 @@
             </div>
         </main>
 
-        <!-- 页脚 -->
         <footer class="bg-gray-800 text-white p-4 text-center text-sm">
             <p>五子棋游戏 &copy; 2025 | Designed by 开元 </p>
         </footer>
     </div>
 
-    <!-- 胜利提示模态框 -->
     <div id="winner-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -202,10 +168,8 @@
         </div>
     </div>
 
-    <!-- 添加音频元素 -->
     <audio id="music" src="jasmine_flower.mp3" loop></audio>
 
-    <!-- AI Worker Script -->
     <script id="ai-worker" type="javascript/worker">
         // AI Worker: Minimax with Alpha-Beta Pruning
         self.onmessage = function(e) {
