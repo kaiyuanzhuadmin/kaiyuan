@@ -642,14 +642,14 @@
             // AI difficulty configuration
             const difficultyConfig = {
                 1: { // Easy 简单
-                    searchDepth: 3, // Search depth: AI looks 3 steps ahead
+                    searchDepth: 4, // Search depth: AI looks 3 steps ahead
                     randomMoveChance: 0.0, // Chance of random move: 10% chance of random move, reducing difficulty
-                    thinkTimeRange: [200, 1500] // Thinking time range (milliseconds)
+                    thinkTimeRange: [300, 1500] // Thinking time range (milliseconds)
                 },
                 2: { // Medium 中等
                     searchDepth: 4, // Search depth: AI looks 4 steps ahead (adjusted for performance)
                     randomMoveChance: 0.0, // Chance of random move: 0% chance of random move
-                    thinkTimeRange: [800, 3500] // Adjusted thinking time range
+                    thinkTimeRange: [700, 3500] // Adjusted thinking time range
                 },
                 3: { // Hard 困难
                     searchDepth: 4, // Search depth: AI looks 5 steps ahead (adjusted for performance)
@@ -1423,19 +1423,19 @@
                 if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 80000; // Broken Four (can still win) (increased)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 10000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 5000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 20000; // Medium-high (increased)
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 10000; // Broken Live Three (increased)
 
                 // Blocked Three (can become blocked four)
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 1000; // Medium (increased)
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 500; // (increased)
+                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 5000; // Medium (increased)
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 1000; // (increased)
 
                 // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 200; // Low-medium (increased)
-                if (pattern.includes('__P_P__')) return 150; // (increased)
+                if (pattern.includes('__PP__')) return 500; // Low-medium (increased)
+                if (pattern.includes('__P_P__')) return 200; // (increased)
 
                 // Blocked Two
-                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 50; // (increased)
+                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 100; // (increased)
                 
                 return 1; // Default score for empty or insignificant patterns
             }
