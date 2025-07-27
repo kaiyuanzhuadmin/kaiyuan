@@ -671,7 +671,7 @@
 
                 // Blocked Three (can become blocked four)
                 if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100; // Reduced score
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 130; // (Reduced score)
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 150; // (Reduced score)
 
                 // Live Two: __PP__ (can become live three)
                 if (pattern.includes('__PP__')) return 18; // Reduced score
@@ -699,7 +699,7 @@
                 
                 // Opponent's Live Three
                 if (opponentPattern.includes('_PPP_')) return -3500;
-                if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -3400;
+                if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -3490;
                 
                 // Opponent's Sleep Three
                 if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -2600;
