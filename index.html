@@ -648,6 +648,114 @@
             // Scale the drawing context to match the logical drawing units
             ctx.scale(devicePixelRatio, devicePixelRatio);
 
+            // Function to evaluate pattern score (more detailed patterns)
+            function evaluatePattern(pattern) {
+                // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
+                // Reduce the scores of all chess patterns to reduce computational burden and avoid blank screens.
+                
+                // Five in a row (winning condition)
+                if (pattern.includes('PPPPP')) return 100000; // Reduced score
+
+                // Live Four: _PPPP_ (can be extended to five in two ways)
+                if (pattern.includes('_PPPP_')) return 10000; // Reduced score
+                // Broken Live Four (e.g., _P_PPP_, _PP_PP_, _PPP_P_)
+                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 5000; // Reduced score
+                
+                // Blocked Four (one end blocked, can still win)
+                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1000; // Reduced score
+                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800; // Broken Four (can still win) (Reduced score)
+
+                // Live Three: _PPP_ (can become live four)
+                if (pattern.includes('_PPP_')) return 690; // Reduced score
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660; // Broken Live Three (Reduced score)
+
+                // Blocked Three (can become blocked four)
+                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100; // Reduced score
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 130; // (Reduced score)
+
+                // Live Two: __PP__ (can become live three)
+                if (pattern.includes('__PP__')) return 18; // Reduced score
+                if (pattern.includes('__P_P__')) return 12; // (Reduced score)
+
+                // Blocked Two
+                if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8; // (Reduced score)
+                
+                // Live One
+                if (pattern.includes('_P_')) return 10; // Live One
+                
+                // Defensive evaluation (opponent's patterns)
+                // Replace P with O to evaluate opponent's threats
+                const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
+                
+                // Opponent's Five in a row
+                if (opponentPattern.includes('PPPPP')) return -900000;
+                
+                // Opponent's Live Four
+                if (opponentPattern.includes('_PPPP_')) return -40000;
+                
+                // Opponent's Blocked Four
+                if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -7000;
+                if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -7000;
+                
+                // Opponent's Live Three
+                if (opponentPattern.includes('_PPP_')) return -2500;
+                if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -2300;
+                
+                // Opponent's Sleep Three
+                if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -500;
+                
+                // Opponent's Live Two
+                if (opponentPattern.includes('_PP_')) return -200;
+                
+                return 1; // Insignificant pattern
+            }
+
+            // Professional Gomoku position evaluation function
+            function evaluatePosition(row, col, player) {
+                const directions = [
+                    [0, 1],   // Horizontal
+                    [1, 0],   // Vertical
+                    [1, 1],   // Main diagonal
+                    [1, -1]   // Anti-diagonal
+                ];
+                
+                let totalScore = 0;
+                
+                // Bonus for center position
+                const centerRow = Math.floor(BOARD_SIZE / 2);
+                const centerCol = Math.floor(BOARD_SIZE / 2);
+                const distanceFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
+                totalScore += Math.max(0, 10 - distanceFromCenter);
+                
+                directions.forEach(([dx, dy]) => {
+                    // Extract a 9-cell pattern (4 cells before and 4 cells after the current position)
+                    let pattern = '';
+                    for (let i = -4; i <= 4; i++) {
+                        const newRow = row + i * dx;
+                        const newCol = col + i * dy;
+                        
+                        if (newRow < 0 || newRow >= BOARD_SIZE || 
+                            newCol < 0 || newCol >= BOARD_SIZE) {
+                            pattern += 'B'; // Boundary
+                        } else if (gameBoard[newRow][newCol] === player) {
+                            pattern += 'P'; // Player's piece
+                        } else if (gameBoard[newRow][newCol] === 0) {
+                            pattern += '_'; // Empty
+                        } else {
+                            pattern += 'O'; // Opponent's piece
+                        }
+                    }
+                    
+                    // Evaluate with the current position set as the player's piece
+                    const midIndex = 4;
+                    pattern = pattern.substring(0, midIndex) + 'P' + pattern.substring(midIndex + 1);
+                    
+                    totalScore += evaluatePattern(pattern);
+                });
+                
+                return totalScore;
+            }
+
             // Calculate responsive display size for the canvas element
             function calculateResponsiveDisplaySize() {
                 const container = document.querySelector('.board-area');
@@ -1371,72 +1479,6 @@
                 return totalScore;
             }
             
-            // Evaluate score for a specific position (improved for AlphaGo-like precision)
-            function evaluatePosition(x, y, player) {
-                const directions = [
-                    [1, 0],   // Horizontal
-                    [0, 1],   // Vertical
-                    [1, 1],   // Diagonal (down-right)
-                    [1, -1]   // Diagonal (up-right)
-                ];
-                
-                let totalPatternScore = 0;
-                let liveThreeCount = 0;
-                let blockedFourCount = 0;
-                let liveFourCount = 0;
-                let sleepFourCount = 0; // Added for patterns like PPPP_ or _PPPP
-
-                for (const [dx, dy] of directions) {
-                    const pattern = getPattern(x, y, dx, dy, player);
-                    const score = evaluatePattern(pattern);
-                    totalPatternScore += score; // Sum up scores from all directions
-
-                    // Count specific threats for combination bonuses
-                    if (pattern.includes('_PPPP_')) {
-                        liveFourCount++;
-                    }
-                    if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) {
-                        blockedFourCount++;
-                    }
-                    // More precise live three detection
-                    if ((pattern.includes('_PPP_') && !pattern.includes('_PPPP_')) ||
-                        (pattern.includes('_P_PP_') && !pattern.includes('_P_PPP_')) ||
-                        (pattern.includes('_PP_P_') && !pattern.includes('_PP_PP_'))) {
-                        liveThreeCount++;
-                    }
-                    // Sleep four (e.g., PPPP_ or _PPPP)
-                    if (pattern.includes('PPPP_') || pattern.includes('_PPPP')) {
-                        sleepFourCount++;
-                    }
-                }
-                
-                // Add bonuses for combinations of threats (AlphaGo-like compound threats)
-                // 降低组合威胁的分值，以减少总分值，避免白屏
-                if (liveFourCount >= 1) { // If there's a live four, it's very strong
-                    totalPatternScore += 10000; // Major bonus, almost a win (降低分值)
-                }
-                if (liveThreeCount >= 2) { // Double live three (双活三)
-                    totalPatternScore += 850; // Very strong threat (降低分值)
-                }
-                if (liveThreeCount >= 1 && blockedFourCount >= 1) { // Live three plus a blocked four (活三冲四)
-                    totalPatternScore += 750; // Strong threat (降低分值)
-                }
-                if (blockedFourCount >= 2) { // Double blocked four (双冲四)
-                    totalPatternScore += 650; // Significant threat (降低分值)
-                }
-                if (sleepFourCount >= 1 && liveThreeCount >= 1) { // Sleep four plus live three (眠四活三)
-                    totalPatternScore += 450; // (降低分值)
-                }
-                
-                // Positional bonus (center area is more valuable)
-                // For a 15x15 board, the center is (7,7). Max distance from center is 7.
-                // 降低中心奖励的乘数
-                const centerDist = Math.max(Math.abs(x - Math.floor(BOARD_SIZE/2)), Math.abs(y - Math.floor(BOARD_SIZE/2)));
-                const centerBonus = (7 - centerDist) * 5; 
-                
-                return totalPatternScore + centerBonus;
-            }
-            
             // Get pattern string around a position
             function getPattern(x, y, dx, dy, player) {
                 let pattern = '';
@@ -1459,41 +1501,6 @@
                 }
                 
                 return pattern;
-            }
-            
-            // Evaluate pattern score (more detailed patterns)
-            function evaluatePattern(pattern) {
-                // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
-                // 降低所有棋型模式的分值，以减少计算负担，避免白屏
-                
-                // Five in a row (winning condition)
-                if (pattern.includes('PPPPP')) return 100000; // 降低分值
-
-                // Live Four: _PPPP_ (can be extended to five in two ways)
-                if (pattern.includes('_PPPP_')) return 10000; // 降低分值
-                // Broken Live Four (e.g., _P_PPP_, _PP_PP_, _PPP_P_)
-                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 5000; // 降低分值
-                
-                // Blocked Four (one end blocked, can still win)
-                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1000; // 降低分值
-                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800; // Broken Four (can still win) (降低分值)
-
-                // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 690; // 降低分值
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660; // Broken Live Three (降低分值)
-
-                // Blocked Three (can become blocked four)
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100; // 降低分值
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 130; // (降低分值)
-
-                // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 18; // 降低分值
-                if (pattern.includes('__P_P__')) return 12; // (降低分值)
-
-                // Blocked Two
-                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 8; // (降低分值)
-                
-                return 1; // Default score for empty or insignificant patterns
             }
             
             // Get a random 'good enough' move for easier difficulties
