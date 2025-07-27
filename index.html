@@ -659,11 +659,11 @@
                 // Live Four: _PPPP_ (can be extended to five in two ways)
                 if (pattern.includes('_PPPP_')) return 10000; // Reduced score
                 // Broken Live Four (e.g., _P_PPP_, _PP_PP_, _PPP_P_)
-                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 5000; // Reduced score
+                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 7000; // Reduced score
                 
                 // Blocked Four (one end blocked, can still win)
-                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1000; // Reduced score
-                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800; // Broken Four (can still win) (Reduced score)
+                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1200; // Reduced score
+                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 1800; // Broken Four (can still win) (Reduced score)
 
                 // Live Three: _PPP_ (can become live four)
                 if (pattern.includes('_PPP_')) return 690; // Reduced score
@@ -694,15 +694,15 @@
                 if (opponentPattern.includes('_PPPP_')) return -40000;
                 
                 // Opponent's Blocked Four
-                if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -7000;
-                if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -7000;
+                if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -10000;
+                if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -10000;
                 
                 // Opponent's Live Three
                 if (opponentPattern.includes('_PPP_')) return -3500;
                 if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -3400;
                 
                 // Opponent's Sleep Three
-                if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -500;
+                if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -2600;
                 
                 // Opponent's Live Two
                 if (opponentPattern.includes('_PP_')) return -200;
