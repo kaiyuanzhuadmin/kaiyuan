@@ -312,7 +312,9 @@
             transform-origin: 0 0; /* Set transform origin to top-left */
             transition: transform 0.5s ease-out; /* Add transition for smooth zoom/pan */
         }
-        /* .thinking-overlay {
+        /* The following CSS for .thinking-overlay and its children has been commented out
+        as per the user's request to remove pop-ups during AI thinking.
+        .thinking-overlay {
             position: absolute;
             inset: 0;
             background: rgba(0, 0, 0, 0.4);
@@ -547,6 +549,9 @@
             <div class="board-area">
                 <div class="board-container">
                     <canvas id="board"></canvas>
+                    <!-- 
+                    The following thinking indicator overlay has been commented out
+                    as per the user's request to remove pop-ups during AI thinking.
                     <div id="thinking" class="thinking-overlay">
                         <div class="thinking-content">
                             <div class="thinking-dots">
@@ -554,9 +559,10 @@
                                 <div class="thinking-dot"></div>
                                 <div class="thinking-dot"></div>
                             </div>
-                            <!--<p style="color: #8B5A2B; font-weight: bold;">开元思考中...</p>-->
+                            <p style="color: #8B5A2B; font-weight: bold;">开元思考中...</p>
                         </div>
-                    </div>
+                    </div> 
+                    -->
                 </div>
 
                 <div class="game-log">
@@ -659,7 +665,7 @@
             const difficultyToggle = document.getElementById('difficulty-toggle');
             const difficultyText = document.getElementById('difficulty-text');
             const gameLog = document.getElementById('game-log');
-            const thinkingIndicator = document.getElementById('thinking');
+            // const thinkingIndicator = document.getElementById('thinking'); // Commented out as per user request
             const modeToggle = document.getElementById('mode-toggle');
             const modeText = document.getElementById('mode-text');
             const winnerModal = document.getElementById('winner-modal');
@@ -1096,7 +1102,7 @@
                 // Determine which AI is playing this turn
                 const currentAiPlayer = currentPlayer; // This will be 1 (Black) or 2 (White)
 
-                thinkingIndicator.style.display = 'flex';
+                // thinkingIndicator.style.display = 'flex'; // Removed as per user request
                 
                 const config = difficultyConfig[difficulty];
                 const thinkTime = config.thinkTimeRange[0] + 
@@ -1107,14 +1113,49 @@
 
                 setTimeout(() => {
                     let move;
-                    // Introduce randomness for lower difficulties
-                    if (Math.random() < config.randomMoveChance) {
+                    
+                    // New logic for AI's first move to ensure flexibility
+                    // If it's the AI's first move (player has made 1 move)
+                    if (moveHistory.length === 1) { 
+                        const playerFirstMove = moveHistory[0];
+                        const candidateOpeningMoves = [];
+                        const radius = 2; // Search within 2 cells of player's first move
+
+                        // Iterate around the player's first move
+                        for (let i = Math.max(0, playerFirstMove.x - radius); i <= Math.min(BOARD_SIZE - 1, playerFirstMove.x + radius); i++) {
+                            for (let j = Math.max(0, playerFirstMove.y - radius); j <= Math.min(BOARD_SIZE - 1, playerFirstMove.y + radius); j++) {
+                                if (gameBoard[i][j] === 0) { // If the cell is empty
+                                    // Exclude the exact player's first move spot
+                                    if (!(i === playerFirstMove.x && j === playerFirstMove.y)) {
+                                        candidateOpeningMoves.push({ x: i, y: j });
+                                    }
+                                }
+                            }
+                        }
+
+                        // Filter out moves that are too far from the board's center
+                        // This prevents the AI from making overly eccentric first moves.
+                        const center = Math.floor(BOARD_SIZE / 2);
+                        const maxDistanceFromCenter = 5; // Keep moves within a reasonable distance from board center
+                        const filteredCandidates = candidateOpeningMoves.filter(m => {
+                            const distFromCenter = Math.max(Math.abs(m.x - center), Math.abs(m.y - center));
+                            return distFromCenter <= maxDistanceFromCenter; 
+                        });
+
+                        if (filteredCandidates.length > 0) {
+                            // Randomly pick one of the filtered candidates for flexibility
+                            move = filteredCandidates[Math.floor(Math.random() * filteredCandidates.length)];
+                        } else {
+                            // Fallback to getBestMove if no suitable opening candidates found (should be rare)
+                            move = getBestMove(); 
+                        }
+                    } else if (Math.random() < config.randomMoveChance) {
                         move = getRandomGoodMove(); // Make a 'good enough' random move
                     } else {
-                        move = getBestMove(); // Use Minimax
+                        move = getBestMove(); // Use Minimax for subsequent moves
                     }
 
-                    thinkingIndicator.style.display = 'none';
+                    // thinkingIndicator.style.display = 'none'; // Removed as per user request
                     
                     if (move && !gameOver) {
                         const {x, y} = move;
@@ -1486,8 +1527,8 @@
                 if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800000; // Broken Four (can still win) (increased)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 400000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 390000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 610000; // Medium-high (increased)
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 590000; // Broken Live Three (increased)
 
                 // Blocked Three (can become blocked four)
                 if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100000; // Medium (increased)
