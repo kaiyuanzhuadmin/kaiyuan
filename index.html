@@ -1222,7 +1222,8 @@
                         // Check for immediate win after making the move
                         if (checkWin(move.x, move.y, player)) {
                             gameBoard[move.x][move.y] = 0; // Undo the move
-                            return { score: 1000000000, move }; // Very high score for winning move (increased significantly)
+                            // 降低即时胜利的分值，以避免过大的数值导致计算问题
+                            return { score: 100000, move }; 
                         }
                         
                         const result = minimax(depth - 1, alpha, beta, false, player === 1 ? 2 : 1);
@@ -1247,7 +1248,8 @@
                         // Check for immediate win for opponent after making the move
                         if (checkWin(move.x, move.y, player)) {
                             gameBoard[move.x][move.y] = 0; // Undo the move
-                            return { score: -1000000000, move }; // Very low score for opponent's winning move (increased significantly)
+                            // 降低即时失败的分值，以避免过大的数值导致计算问题
+                            return { score: -100000, move }; 
                         }
                         
                         const result = minimax(depth - 1, alpha, beta, true, player === 1 ? 2 : 1);
@@ -1308,8 +1310,8 @@
                             
                             // Combine scores, prioritizing moves that create threats for self
                             // AND moves that block opponent's threats.
-                            // Increased multiplier for opponent's score to prioritize blocking.
-                            const combinedScore = scoreForPlayer + scoreForOpponent * 7.0; // Changed from 5.0 to 7.0
+                            // 降低对手分值的乘数，以减少总分值，避免白屏
+                            const combinedScore = scoreForPlayer + scoreForOpponent * 3.0; 
                             moves.push({ x: i, y: j, score: combinedScore });
                         }
                     }
@@ -1360,8 +1362,8 @@
                         if (gameBoard[i][j] === player) {
                             totalScore += evaluatePosition(i, j, player);
                         } else if (gameBoard[i][j] === opponent) {
-                            // Opponent's threats are much more critical to defend against (increased multiplier from 3.5 to 5.0)
-                            totalScore -= evaluatePosition(i, j, opponent) * 5.0; 
+                            // Opponent's threats are much more critical to defend against (降低对手威胁的乘数)
+                            totalScore -= evaluatePosition(i, j, opponent) * 3.0; 
                         }
                     }
                 }
@@ -1409,27 +1411,28 @@
                 }
                 
                 // Add bonuses for combinations of threats (AlphaGo-like compound threats)
-                // Increase scores for composite threats to make AI more proactive in blocking
+                // 降低组合威胁的分值，以减少总分值，避免白屏
                 if (liveFourCount >= 1) { // If there's a live four, it's very strong
-                    totalPatternScore += 10000000; // Major bonus, almost a win (increased significantly)
+                    totalPatternScore += 10000; // Major bonus, almost a win (降低分值)
                 }
                 if (liveThreeCount >= 2) { // Double live three (双活三)
-                    totalPatternScore += 850000; // Very strong threat (increased from 800,000 to 850,000)
+                    totalPatternScore += 850; // Very strong threat (降低分值)
                 }
                 if (liveThreeCount >= 1 && blockedFourCount >= 1) { // Live three plus a blocked four (活三冲四)
-                    totalPatternScore += 750000; // Strong threat (increased from 700,000 to 750,000)
+                    totalPatternScore += 750; // Strong threat (降低分值)
                 }
                 if (blockedFourCount >= 2) { // Double blocked four (双冲四)
-                    totalPatternScore += 650000; // Significant threat (increased from 600,000 to 650,000)
+                    totalPatternScore += 650; // Significant threat (降低分值)
                 }
                 if (sleepFourCount >= 1 && liveThreeCount >= 1) { // Sleep four plus live three (眠四活三)
-                    totalPatternScore += 450000; // (increased from 400,000 to 450,000)
+                    totalPatternScore += 450; // (降低分值)
                 }
                 
                 // Positional bonus (center area is more valuable)
                 // For a 15x15 board, the center is (7,7). Max distance from center is 7.
+                // 降低中心奖励的乘数
                 const centerDist = Math.max(Math.abs(x - Math.floor(BOARD_SIZE/2)), Math.abs(y - Math.floor(BOARD_SIZE/2)));
-                const centerBonus = (7 - centerDist) * 50; // Increased bonus, relative to center (7,7) for 15x15 board (increased multiplier from 25 to 50)
+                const centerBonus = (7 - centerDist) * 5; 
                 
                 return totalPatternScore + centerBonus;
             }
@@ -1461,33 +1464,34 @@
             // Evaluate pattern score (more detailed patterns)
             function evaluatePattern(pattern) {
                 // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
+                // 降低所有棋型模式的分值，以减少计算负担，避免白屏
                 
                 // Five in a row (winning condition)
-                if (pattern.includes('PPPPP')) return 1000000000; // Increased win score
-                
+                if (pattern.includes('PPPPP')) return 100000; // 降低分值
+
                 // Live Four: _PPPP_ (can be extended to five in two ways)
-                if (pattern.includes('_PPPP_')) return 10000000; // Very high (increased)
+                if (pattern.includes('_PPPP_')) return 10000; // 降低分值
                 // Broken Live Four (e.g., _P_PPP_, _PP_PP_, _PPP_P_)
-                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 5000000; // High (increased)
+                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 5000; // 降低分值
                 
                 // Blocked Four (one end blocked, can still win)
-                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1000000; // Still high (increased)
-                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800000; // Broken Four (can still win) (increased)
+                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1000; // 降低分值
+                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800; // Broken Four (can still win) (降低分值)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 590000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 560000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 590; // 降低分值
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 560; // Broken Live Three (降低分值)
 
                 // Blocked Three (can become blocked four)
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100000; // Medium (increased)
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 130000; // (increased)
+                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100; // 降低分值
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 130; // (降低分值)
 
                 // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 18000; // Low-medium (increased)
-                if (pattern.includes('__P_P__')) return 12000; // (increased)
+                if (pattern.includes('__PP__')) return 18; // 降低分值
+                if (pattern.includes('__P_P__')) return 12; // (降低分值)
 
                 // Blocked Two
-                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 8000; // (increased)
+                if (pattern.includes('BPP__') || pattern.includes('__PPB')) return 8; // (降低分值)
                 
                 return 1; // Default score for empty or insignificant patterns
             }
@@ -2060,7 +2064,7 @@
                 // If in Player vs AI mode and it's AI's turn after undo, make AI move
                 if (gameMode === 1) {
                     const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
-                                     (!playerStartsWithBlack && currentPlayer === 1);
+                                     !playerStartsWithBlack && currentPlayer === 1;
                     if (isAiTurn && !gameOver) { // Ensure game is not over before AI moves
                         aiMove();
                     }
