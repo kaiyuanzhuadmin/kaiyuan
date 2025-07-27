@@ -276,11 +276,15 @@
             background: #d1d5db;
         }
         
+        /* Updated .board-container styles for enhanced aesthetics */
         .board-container {
             position: relative;
-            border-radius: 0.5rem;
+            border-radius: 0.75rem; /* Slightly larger border-radius for a softer look */
             overflow: hidden;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            /* Enhanced box-shadow for depth and elegance */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), /* Main shadow */
+                        0 6px 6px rgba(0, 0, 0, 0.15); /* Smaller, softer shadow */
+            border: 2px solid rgba(139, 90, 43, 0.7); /* Subtle border matching header color */
             width: fit-content;
             max-width: 100%;
             margin: 0 auto;
@@ -288,15 +292,14 @@
             justify-content: center;
             /* 设置棋盘容器背景为半透明白色，让背景图透出 */
             background-color: rgba(255, 255, 255, 0.6); 
-            /* Ensure the container is scrollable for pan effect */
             touch-action: none; /* Disable default touch actions like scroll */
         }
         
         @media (max-width: 480px) {
             .board-container {
                 margin: 0 auto;
-                border-radius: 0.25rem;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                border-radius: 0.5rem; /* Adjusted for smaller screens */
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15); /* Adjusted shadow for smaller screens */
             }
         }
         
@@ -307,6 +310,7 @@
             height: auto;
             /* Allow hardware acceleration for smooth transformations */
             transform-origin: 0 0; /* Set transform origin to top-left */
+            transition: transform 0.5s ease-out; /* Add transition for smooth zoom/pan */
         }
         /* .thinking-overlay {
             position: absolute;
@@ -452,7 +456,7 @@
     </style>
 </head>
 <body>
-    <!-- 背景图片叠加层 -->
+    <!-- Background image overlay -->
     <div class="background-overlay"></div>
 
     <div class="container">
@@ -600,9 +604,10 @@
             // Auto-zoom/pan constants for mobile
             const IS_MOBILE = window.innerWidth < 768; // Simple mobile detection
             const IDLE_TIMEOUT_MS = 3000; // 3 seconds idle for auto-fit
-            const AUTO_FIT_ANIMATION_DURATION = 500; // 0.5 seconds for auto-fit animation, ensuring quick zoom
+            const AUTO_FIT_ANIMATION_DURATION = 500; // 0.5 seconds for auto-fit animation, as requested
             const INITIAL_MOBILE_VISIBLE_CELLS = 8; // How many cells to show initially on mobile (e.g., 8x8 area)
-            const OPTIMAL_VIEW_PADDING_CELLS = 2; // Padding around pieces for optimal view
+            const OPTIMAL_VIEW_PADDING_CELLS = 3; // Increased padding around pieces for optimal view, from 2 to 3
+            const CROWDED_BOARD_THRESHOLD = 10; // Number of pieces to consider board "crowded" for last move focus
 
             // Game state
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -751,7 +756,7 @@
                     // Calculate zoom ratio to fit the target visible area into the container width
                     scale = (boardContainer.clientWidth / initialScaleFactor) / targetLogicalWidth;
                     // Clamp initial zoom ratio to ensure it's not too small or too large
-                    scale = Math.max(1.0, Math.min(scale, 3.0)); 
+                    scale = Math.max(1.0, Math.min(scale, 2.5)); // Adjusted max scale to 2.5
                     
                     // Calculate translation to center the board's central area
                     const currentDisplayWidth = LOGICAL_CANVAS_WIDTH * scale * initialScaleFactor;
@@ -1031,10 +1036,9 @@
                 const pieceColor = currentPlayer === 1 ? '黑' : '白';
                 logMessage(`${playerName}在(${x+1},${y+1})落${pieceColor}子`);
                 
-                // Dynamic zoom for mobile
-                if (IS_MOBILE) {
-                    updateDynamicZoom(); // 落子后快速缩放棋盘到合适区域
-                }
+                // Dynamic zoom for mobile, and now also for desktop after a move for better focus
+                // The transition property on #board handles the 0.5s animation
+                updateDynamicZoom(); 
 
                 // Check if player wins
                 if (checkWin(x, y, currentPlayer)) {
@@ -1115,10 +1119,8 @@
                         const duration = (aiEndTime - aiStartTime) / 1000; // Convert to seconds
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子 (用时 ${duration.toFixed(2)} 秒)`);
 
-                        // Dynamic zoom for mobile
-                        if (IS_MOBILE) {
-                            updateDynamicZoom(); // 落子后快速缩放棋盘到合适区域
-                        }
+                        // Dynamic zoom for mobile, and now also for desktop after a move for better focus
+                        updateDynamicZoom(); 
                         
                         // Check if AI wins
                         if (checkWin(x, y, currentPlayer)) {
@@ -1675,11 +1677,8 @@
             function resetIdleTimer() {
                 if (!IS_MOBILE) return; // Only for mobile
                 clearTimeout(idleTimer);
-                if (autoFitAnimationId) {
-                    cancelAnimationFrame(autoFitAnimationId);
-                    autoFitAnimationId = null;
-                }
-                // isGestureActive is managed by touch/mouse events, not by idle timer directly
+                // No need to cancel autoFitAnimationId here, as it's managed by animateToView
+                // and the transition property on #board
                 idleTimer = setTimeout(startAutoFit, IDLE_TIMEOUT_MS);
             }
 
@@ -1702,17 +1701,41 @@
                 return { minX, maxX, minY, maxY };
             }
 
-            // Helper function to calculate optimal view (scale and pan) for a given bounding box
-            function calculateOptimalView(boundingBox) {
+            /**
+             * Helper function to calculate optimal view (scale and pan) for a given area.
+             * Can focus on a specific target center or the overall bounding box of pieces.
+             * @param {Object} [options] - Configuration options.
+             * @param {Object} [options.targetCenter] - {x, y} coordinates to center the view around.
+             * @param {Object} [options.boundingBox] - {minX, maxX, minY, maxY} for overall piece distribution.
+             */
+            function calculateOptimalView(options = {}) {
                 const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                 const containerWidth = boardContainer.clientWidth;
                 const containerHeight = boardContainer.clientHeight;
 
-                // Add padding around the bounding box of pieces
-                const contentMinX = Math.max(0, boundingBox.minX - OPTIMAL_VIEW_PADDING_CELLS);
-                const contentMaxX = Math.min(BOARD_SIZE - 1, boundingBox.maxX + OPTIMAL_VIEW_PADDING_CELLS);
-                const contentMinY = Math.max(0, boundingBox.minY - OPTIMAL_VIEW_PADDING_CELLS);
-                const contentMaxY = Math.min(BOARD_SIZE - 1, boundingBox.maxY + OPTIMAL_VIEW_PADDING_CELLS);
+                let contentMinX, contentMaxX, contentMinY, contentMaxY;
+
+                if (options.targetCenter) {
+                    // If a target center is provided (e.g., last move), focus around it
+                    contentMinX = Math.max(0, options.targetCenter.x - OPTIMAL_VIEW_PADDING_CELLS);
+                    contentMaxX = Math.min(BOARD_SIZE - 1, options.targetCenter.x + OPTIMAL_VIEW_PADDING_CELLS);
+                    contentMinY = Math.max(0, options.targetCenter.y - OPTIMAL_VIEW_PADDING_CELLS);
+                    contentMaxY = Math.min(BOARD_SIZE - 1, options.targetCenter.y + OPTIMAL_VIEW_PADDING_CELLS);
+                } else if (options.boundingBox) {
+                    // Otherwise, use the overall bounding box of pieces
+                    contentMinX = Math.max(0, options.boundingBox.minX - OPTIMAL_VIEW_PADDING_CELLS);
+                    contentMaxX = Math.min(BOARD_SIZE - 1, options.boundingBox.maxX + OPTIMAL_VIEW_PADDING_CELLS);
+                    contentMinY = Math.max(0, options.boundingBox.minY - OPTIMAL_VIEW_PADDING_CELLS);
+                    contentMaxY = Math.min(BOARD_SIZE - 1, options.boundingBox.maxY + OPTIMAL_VIEW_PADDING_CELLS);
+                } else {
+                    // Default to showing the initial mobile visible cells, centered
+                    const mid = Math.floor(BOARD_SIZE / 2);
+                    const halfVisible = Math.floor(INITIAL_MOBILE_VISIBLE_CELLS / 2);
+                    contentMinX = Math.max(0, mid - halfVisible);
+                    contentMaxX = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1); // -1 because it's a range
+                    contentMinY = Math.max(0, mid - halfVisible);
+                    contentMaxY = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1);
+                }
 
                 // Calculate logical internal drawing dimensions of the content area
                 const contentLogicalWidth = (contentMaxX - contentMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
@@ -1723,9 +1746,9 @@
                 let targetScaleY = containerHeight / (contentLogicalHeight * initialScaleFactor);
                 let newScale = Math.min(targetScaleX, targetScaleY);
 
-                // Clamp newScale to reasonable bounds (e.g., between 1.0 and 3.0)
-                // 1.0 means full board visible, 3.0 means 3x zoom
-                newScale = Math.max(1.0, Math.min(newScale, 3.0));
+                // Clamp newScale to reasonable bounds (e.g., between 1.0 and 2.5)
+                // Reduced max scale from 3.0 to 2.5 to prevent excessive zoom
+                newScale = Math.max(1.0, Math.min(newScale, 2.5)); 
 
                 // Calculate center of the content area on the logical internal canvas
                 const centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinX + contentMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
@@ -1744,47 +1767,28 @@
 
             // Function to smoothly animate to a target scale and position
             function animateToView(targetScale, targetX, targetY) {
-                if (autoFitAnimationId) {
-                    cancelAnimationFrame(autoFitAnimationId);
-                }
-
-                const startScale = scale;
-                const startX = translateX;
-                const startY = translateY;
-                autoFitStartTime = performance.now();
-
-                function animate(currentTime) {
-                    if (!autoFitStartTime) autoFitStartTime = currentTime;
-                    const elapsedTime = currentTime - autoFitStartTime;
-                    const progress = Math.min(elapsedTime / AUTO_FIT_ANIMATION_DURATION, 1);
-                    
-                    scale = startScale + (targetScale - startScale) * progress;
-                    translateX = startX + (targetX - startX) * progress;
-                    translateY = startY + (targetY - startY) * progress;
-
-                    clampPan(); // Ensure animation steps stay within bounds
-                    applyTransform();
-
-                    if (progress < 1) {
-                        autoFitAnimationId = requestAnimationFrame(animate);
-                    } else {
-                        autoFitAnimationId = null;
-                        // Ensure final state is exactly the target
-                        scale = targetScale;
-                        translateX = targetX;
-                        translateY = targetY;
-                        clampPan();
-                        applyTransform();
-                    }
-                }
-                autoFitAnimationId = requestAnimationFrame(animate);
+                // The CSS transition property on #board handles the animation duration.
+                // We just update the target transform values.
+                scale = targetScale;
+                translateX = targetX;
+                translateY = targetY;
+                clampPan(); // Ensure target values are within bounds
+                applyTransform();
             }
 
             // Update dynamic zoom for mobile (called after each move)
             function updateDynamicZoom() {
-                if (!IS_MOBILE) return;
-                const boundingBox = getPieceBoundingBox();
-                const optimalView = calculateOptimalView(boundingBox);
+                if (!IS_MOBILE) return; // Only for mobile now, desktop will use a simpler approach
+
+                let optimalView;
+                if (moveHistory.length > CROWDED_BOARD_THRESHOLD && lastMovePosition) {
+                    // If crowded, focus on the last move
+                    optimalView = calculateOptimalView({ targetCenter: lastMovePosition });
+                } else {
+                    // Otherwise, focus on the overall piece distribution
+                    optimalView = calculateOptimalView({ boundingBox: getPieceBoundingBox() });
+                }
+                
                 animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
             }
 
@@ -1793,7 +1797,7 @@
                 if (!IS_MOBILE || isGestureActive) return; // Only for mobile and if no user interaction
 
                 const boundingBox = getPieceBoundingBox();
-                const optimalView = calculateOptimalView(boundingBox);
+                const optimalView = calculateOptimalView({ boundingBox: boundingBox }); // Always fit all pieces on idle
                 animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
                 
                 // 手机客户端无操作时，自动滑动到棋盘区域
@@ -1806,10 +1810,7 @@
                     event.preventDefault(); 
                     isGestureActive = true; // 用户正在交互
                     clearTimeout(idleTimer); // 停止空闲计时器
-                    if (autoFitAnimationId) { // 停止任何正在进行的自动适应动画
-                        cancelAnimationFrame(autoFitAnimationId);
-                        autoFitAnimationId = null;
-                    }
+                    // No need to cancel autoFitAnimationId here, as the transition property handles it.
                 }
 
                 if (event.touches.length === 1) {
@@ -1854,7 +1855,7 @@
                     const currentPinchDistance = getDistance(event.touches[0], event.touches[1]);
                     let newScale = initialPinchScale * (currentPinchDistance / initialPinchDistance);
 
-                    newScale = Math.max(1.0, Math.min(newScale, 3.0));
+                    newScale = Math.max(1.0, Math.min(newScale, 2.5)); // Adjusted max scale to 2.5
 
                     const rect = canvas.getBoundingClientRect();
                     const currentMidpoint = getMidpoint(event.touches[0], event.touches[1]);
@@ -1907,6 +1908,7 @@
 
             canvas.addEventListener('mousedown', (event) => {
                 if (!IS_MOBILE) { // Only for desktop
+                    isDragging = true; // Set dragging for desktop mouse
                     isGestureActive = true;
                     lastPanX = event.clientX;
                     lastPanY = event.clientY;
@@ -1917,6 +1919,7 @@
 
             canvas.addEventListener('mouseup', (event) => {
                 if (!IS_MOBILE) { // Only for desktop
+                    isDragging = false; // Reset dragging for desktop mouse
                     const deltaX = event.clientX - initialTouchX;
                     const deltaY = event.clientY - initialTouchY;
                     const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -1945,7 +1948,7 @@
             });
 
             canvas.addEventListener('mousemove', (event) => {
-                if (!IS_MOBILE && event.buttons === 1) { // Only for desktop and if left mouse button is down
+                if (!IS_MOBILE && event.buttons === 1 && isDragging) { // Only for desktop and if left mouse button is down and dragging is active
                     const currentX = event.clientX;
                     const currentY = event.clientY;
 
@@ -1963,6 +1966,7 @@
 
             canvas.addEventListener('mouseout', () => {
                 if (!IS_MOBILE) { // Only for desktop
+                    isDragging = false; // Stop dragging if mouse leaves canvas
                     isGestureActive = false; // Reset gesture active flag if mouse leaves
                 }
             });
@@ -2024,9 +2028,8 @@
                 updateUndoChancesDisplay();
                 logMessage(`悔棋 ${undoCount} 步`);
 
-                if (IS_MOBILE) {
-                    updateDynamicZoom(); // Adjust zoom after undo
-                }
+                // Adjust zoom after undo, focusing on the new last move or overall board
+                updateDynamicZoom(); 
 
                 // If in Player vs AI mode and it's AI's turn after undo, make AI move
                 if (gameMode === 1) {
