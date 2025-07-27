@@ -1359,9 +1359,11 @@
                             // Evaluate position for both current player and opponent to find critical spots
                             const scoreForPlayer = evaluatePosition(i, j, currentPlayer);
                             const scoreForOpponent = evaluatePosition(i, j, currentPlayer === 1 ? 2 : 1);
-                            // Combine scores, prioritizing moves that create threats for self or block opponent's threats
-                            // Opponent's threats are even more critical to defend against (increased multiplier from 2.5 to 5.0)
-                            const combinedScore = scoreForPlayer + scoreForOpponent * 5.0; 
+                            
+                            // Combine scores, prioritizing moves that create threats for self
+                            // AND moves that block opponent's threats.
+                            // Increased multiplier for opponent's score to prioritize blocking.
+                            const combinedScore = scoreForPlayer + scoreForOpponent * 7.0; // Changed from 5.0 to 7.0
                             moves.push({ x: i, y: j, score: combinedScore });
                         }
                     }
@@ -1527,12 +1529,12 @@
                 if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800000; // Broken Four (can still win) (increased)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 610000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 590000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 590000; // Medium-high (increased)
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 560000; // Broken Live Three (increased)
 
                 // Blocked Three (can become blocked four)
                 if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100000; // Medium (increased)
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 100000; // (increased)
+                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 130000; // (increased)
 
                 // Live Two: __PP__ (can become live three)
                 if (pattern.includes('__PP__')) return 18000; // Low-medium (increased)
