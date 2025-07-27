@@ -1479,8 +1479,8 @@
                 if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800; // Broken Four (can still win) (降低分值)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 590; // 降低分值
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 560; // Broken Live Three (降低分值)
+                if (pattern.includes('_PPP_')) return 690; // 降低分值
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660; // Broken Live Three (降低分值)
 
                 // Blocked Three (can become blocked four)
                 if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100; // 降低分值
