@@ -1261,7 +1261,7 @@
                 if (gameMode === 2) {
                     return player === 1 ? '玩家1' : '玩家2';
                 } else if (gameMode === 3) { // New AI vs AI mode
-                    return player === 1 ? '开元 AI (黑)' : 'Kaiyuan AI (白)'; // Differentiate AI players
+                    return player === 1 ? '开元 (黑)' : 'Kaiyuan AI (白)'; // Differentiate AI players
                 } else { // Player vs AI mode
                     if (playerStartsWithBlack) {
                         return player === 1 ? '玩家' : '开元';
@@ -1547,9 +1547,9 @@
                         const isBlack = gameMode === 2 && currentPlayer === 2;
                         winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
                         winnerText.textContent = '玩家2';
-                    } else if (message.includes('开元 AI (黑)')) { // Specific for AI vs AI
+                    } else if (message.includes('开元 (黑)')) { // Specific for AI vs AI
                         winnerIndicator.className = `piece black`;
-                        winnerText.textContent = '开元 AI (黑)';
+                        winnerText.textContent = '开元 (黑)';
                     } else if (message.includes('Kaiyuan AI (白)')) { // Specific for AI vs AI
                         winnerIndicator.className = `piece white`;
                         winnerText.textContent = 'Kaiyuan AI (白)';
@@ -1572,7 +1572,7 @@
                     if (gameMode === 2) {
                         currentPlayerText.textContent = currentPlayer === 1 ? '玩家1' : '玩家2';
                     } else if (gameMode === 3) { // AI vs AI mode
-                        currentPlayerText.textContent = currentPlayer === 1 ? '开元 AI (黑)' : 'Kaiyuan AI (白)';
+                        currentPlayerText.textContent = currentPlayer === 1 ? '开元 (黑)' : 'Kaiyuan AI (白)';
                     } else { // Player vs AI mode
                         if (playerStartsWithBlack) {
                             currentPlayerText.textContent = currentPlayer === 1 ? '玩家' : '开元';
