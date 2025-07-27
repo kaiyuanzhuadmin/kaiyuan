@@ -616,7 +616,7 @@
             let difficulty = 2; // 1: Easy, 2: Medium, 3: Hard
             let moveHistory = [];
             let lastMovePosition = null;
-            let gameMode = 1; // 1: Player vs AI, 2: Player vs Player
+            let gameMode = 1; // 1: Player vs AI, 2: Player vs Player, 3: AI vs AI
             let gameCount = 1; // Game count
             let playerStartsWithBlack = true; // Does player start with black?
             let undoChances = 0;
@@ -738,7 +738,6 @@
                 // Recalculate and apply display size on init as well
                 calculateResponsiveDisplaySize(); 
                 gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // Clear board
-                currentPlayer = 1; // Always black starts
                 gameOver = false;
                 moveHistory = [];
                 lastMovePosition = null;
@@ -747,7 +746,13 @@
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
                 
-                if (IS_MOBILE) {
+                if (gameMode === 3) { // AI vs AI mode
+                    logMessage('开元 vs Kaiyuan 模式开始');
+                    // Set up the first AI player (AI1 is Black)
+                    currentPlayer = 1; 
+                    updateGameStatus();
+                    setTimeout(() => aiMove(), 1000); // Start AI game after a short delay
+                } else if (IS_MOBILE) {
                     // Mobile: Automatically zoom to 8x8 area and center at the start of the game
                     const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                     const targetVisibleCells = INITIAL_MOBILE_VISIBLE_CELLS; 
@@ -775,16 +780,23 @@
                     applyTransform();
                 }
 
-                if (playerStartsWithBlack) {
-                    logMessage('玩家执黑先手，请点击棋盘落子');
-                } else {
-                    logMessage('开元执黑先手');
-                    // AI starts, will think shortly
-                    setTimeout(() => {
-                        if (gameMode === 1 && !gameOver) {
-                            aiMove();
-                        }
-                    }, 500);
+                // Initial player setting based on mode
+                if (gameMode === 1) { // Player vs AI
+                    if (playerStartsWithBlack) {
+                        currentPlayer = 1; // Player is black
+                        logMessage('玩家执黑先手，请点击棋盘落子');
+                    } else {
+                        currentPlayer = 1; // AI is black
+                        logMessage('开元执黑先手');
+                        setTimeout(() => {
+                            if (!gameOver) {
+                                aiMove();
+                            }
+                        }, 500);
+                    }
+                } else if (gameMode === 2) { // Player vs Player
+                    currentPlayer = 1; // Player 1 is black
+                    logMessage('玩家1执黑先手，请点击棋盘落子');
                 }
                 
                 winnerModal.style.display = 'none';
@@ -1012,15 +1024,17 @@
             
             // Handle player move
             function handlePlayerMove(x, y) {
-                if (gameOver || gameBoard[x][y] !== 0) {
+                // Prevent player input if game is over or in AI vs AI mode
+                if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3) { 
                     return;
                 }
                 
-                // Check if it's player's turn
-                const isPlayerTurn = (playerStartsWithBlack && currentPlayer === 1) || 
-                                   (!playerStartsWithBlack && currentPlayer === 2);
+                // Check if it's player's turn (only relevant for Player vs AI)
+                const isPlayerTurn = (gameMode === 1 && playerStartsWithBlack && currentPlayer === 1) || 
+                                     (gameMode === 1 && !playerStartsWithBlack && currentPlayer === 2) ||
+                                     (gameMode === 2); // In Player vs Player, both are players
                 
-                if (gameMode === 1 && !isPlayerTurn) {
+                if (!isPlayerTurn) {
                     return; // Not player's turn
                 }
                 
@@ -1079,7 +1093,9 @@
             function aiMove() {
                 if (gameOver) return;
                 
-                // Show thinking indicator
+                // Determine which AI is playing this turn
+                const currentAiPlayer = currentPlayer; // This will be 1 (Black) or 2 (White)
+
                 thinkingIndicator.style.display = 'flex';
                 
                 const config = difficultyConfig[difficulty];
@@ -1104,15 +1120,15 @@
                         const {x, y} = move;
                         
                         // Record AI move
-                        gameBoard[x][y] = currentPlayer;
-                        moveHistory.push({x, y, player: currentPlayer});
+                        gameBoard[x][y] = currentAiPlayer; // Use currentAiPlayer for the move
+                        moveHistory.push({x, y, player: currentAiPlayer});
                         lastMovePosition = {x, y};
                         
                         // Animate piece placement
-                        animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white');
+                        animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white');
 
-                        const aiName = getPlayerName(currentPlayer);
-                        const pieceColor = currentPlayer === 1 ? '黑' : '白';
+                        const aiName = getPlayerName(currentAiPlayer); // Get name based on currentAiPlayer
+                        const pieceColor = currentAiPlayer === 1 ? '黑' : '白';
                         
                         // Calculate AI thinking duration
                         const aiEndTime = performance.now();
@@ -1123,7 +1139,7 @@
                         updateDynamicZoom(); 
                         
                         // Check if AI wins
-                        if (checkWin(x, y, currentPlayer)) {
+                        if (checkWin(x, y, currentAiPlayer)) {
                             gameOver = true;
                             const winnerMessage = `${aiName}获胜！`;
                             updateGameStatus(winnerMessage);
@@ -1141,9 +1157,14 @@
                             return;
                         }
                         
-                        // Switch to player's turn
-                        currentPlayer = currentPlayer === 1 ? 2 : 1;
+                        // Switch to next player
+                        currentPlayer = currentAiPlayer === 1 ? 2 : 1;
                         updateGameStatus();
+
+                        // If in AI vs AI mode, immediately trigger the next AI move after a delay
+                        if (gameMode === 3 && !gameOver) {
+                            setTimeout(() => aiMove(), 1000); // Delay for observation
+                        }
                     } else if (!move && !gameOver) {
                         console.warn("AI could not find a move, or game is already over.");
                     }
@@ -1155,7 +1176,9 @@
             function getPlayerName(player) {
                 if (gameMode === 2) {
                     return player === 1 ? '玩家1' : '玩家2';
-                } else {
+                } else if (gameMode === 3) { // New AI vs AI mode
+                    return player === 1 ? '开元 AI (黑)' : 'Kaiyuan AI (白)'; // Differentiate AI players
+                } else { // Player vs AI mode
                     if (playerStartsWithBlack) {
                         return player === 1 ? '玩家' : '开元';
                     } else {
@@ -1527,7 +1550,7 @@
                     winnerInfo.classList.remove('hidden');
                     
                     if (message.includes('玩家1') || (message.includes('玩家') && !message.includes('玩家2'))) {
-                        const isBlack = (playerStartsWithBlack && gameMode === 1) || 
+                        const isBlack = (gameMode === 1 && playerStartsWithBlack) || 
                                        (gameMode === 2 && currentPlayer === 1);
                         winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
                         winnerText.textContent = gameMode === 2 ? '玩家1' : '玩家';
@@ -1535,8 +1558,15 @@
                         const isBlack = gameMode === 2 && currentPlayer === 2;
                         winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
                         winnerText.textContent = '玩家2';
-                    } else if (message.includes('开元')) {
-                        const isBlack = !playerStartsWithBlack;
+                    } else if (message.includes('开元 AI (黑)')) { // Specific for AI vs AI
+                        winnerIndicator.className = `piece black`;
+                        winnerText.textContent = '开元 AI (黑)';
+                    } else if (message.includes('Kaiyuan AI (白)')) { // Specific for AI vs AI
+                        winnerIndicator.className = `piece white`;
+                        winnerText.textContent = 'Kaiyuan AI (白)';
+                    }
+                     else if (message.includes('开元')) {
+                        const isBlack = (gameMode === 1 && !playerStartsWithBlack);
                         winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
                         winnerText.textContent = '开元';
                     } else {
@@ -1546,13 +1576,15 @@
                     gameStatus.textContent = '游戏进行中';
                     winnerInfo.classList.add('hidden');
                     
-                    // Update current player indicator
+                    // Update current player indicator based on game mode
                     const isCurrentPlayerBlack = currentPlayer === 1;
                     currentPlayerIndicator.className = `piece ${isCurrentPlayerBlack ? 'black' : 'white'}`;
                     
                     if (gameMode === 2) {
                         currentPlayerText.textContent = currentPlayer === 1 ? '玩家1' : '玩家2';
-                    } else {
+                    } else if (gameMode === 3) { // AI vs AI mode
+                        currentPlayerText.textContent = currentPlayer === 1 ? '开元 AI (黑)' : 'Kaiyuan AI (白)';
+                    } else { // Player vs AI mode
                         if (playerStartsWithBlack) {
                             currentPlayerText.textContent = currentPlayer === 1 ? '玩家' : '开元';
                         } else {
@@ -1998,6 +2030,11 @@
                     logMessage('悔棋机会不足，请尝试兑换。');
                     return;
                 }
+                // Undo is not allowed in AI vs AI mode
+                if (gameMode === 3) {
+                    logMessage('AI vs AI 模式下无法悔棋。');
+                    return;
+                }
 
                 if (moveHistory.length === 0) {
                     logMessage('棋盘上没有可悔的棋子。');
@@ -2054,10 +2091,10 @@
             
             // Mode toggle button event
             modeToggle.addEventListener('click', () => {
-                gameMode = gameMode === 1 ? 2 : 1;
-                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家'];
+                gameMode = (gameMode % 3) + 1; // Cycles 1 -> 2 -> 3 -> 1
+                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家', '开元 vs Kaiyuan']; // Added new mode
                 modeText.textContent = modeNames[gameMode - 1];
-                playerStartsWithBlack = true;
+                playerStartsWithBlack = true; // Reset for new game mode
                 gameCount = 1;
                 logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
                 initGame(); // Re-initialize game to apply new mode settings
