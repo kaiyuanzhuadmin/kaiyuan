@@ -814,22 +814,11 @@
                     setTimeout(() => aiMove(), 1000); // Start AI game after a short delay
                 } else if (IS_MOBILE) {
                     // Mobile: Automatically zoom to 8x8 area and center at the start of the game
-                    const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
-                    const targetVisibleCells = INITIAL_MOBILE_VISIBLE_CELLS; 
-                    const targetLogicalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
-
-                    // Calculate zoom ratio to fit the target visible area into the container width
-                    scale = (boardContainer.clientWidth / initialScaleFactor) / targetLogicalWidth;
-                    // Clamp initial zoom ratio to ensure it's not too small or too large
-                    scale = Math.max(1.0, Math.min(scale, 2.5)); // Adjusted max scale to 2.5
-                    
-                    // Calculate translation to center the board's central area
-                    const currentDisplayWidth = LOGICAL_CANVAS_WIDTH * scale * initialScaleFactor;
-                    const currentDisplayHeight = LOGICAL_CANVAS_HEIGHT * scale * initialScaleFactor;
-
-                    translateX = (boardContainer.clientWidth - currentDisplayWidth) / 2;
-                    translateY = (boardContainer.clientHeight - currentDisplayHeight) / 2;
-                    clampPan();
+                    const optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS }); // Use the initial mobile cells constant
+                    scale = optimalView.scale;
+                    translateX = optimalView.translateX;
+                    translateY = optimalView.translateY;
+                    clampPan(); // Ensure it's clamped
                     applyTransform();
                 } else {
                     // Desktop: Ensure the entire board is visible and centered
@@ -1738,6 +1727,7 @@
              * Can focus on a specific target center or the overall bounding box of pieces.
              * @param {Object} [options] - Configuration options.
              * @param {Object} [options.targetCenter] - {x, y} coordinates to center the view around.
+             * @param {number} [options.visibleCells] - The number of cells to make visible (e.g., 8 for 8x8 view).
              * @param {Object} [options.boundingBox] - {minX, maxX, minY, maxY} for overall piece distribution.
              */
             function calculateOptimalView(options = {}) {
@@ -1745,46 +1735,62 @@
                 const containerWidth = boardContainer.clientWidth;
                 const containerHeight = boardContainer.clientHeight;
 
-                let contentMinX, contentMaxX, contentMinY, contentMaxY;
+                let contentLogicalWidth, contentLogicalHeight;
+                let centerLogicalX, centerLogicalY;
 
-                if (options.targetCenter) {
-                    // If a target center is provided (e.g., last move), focus around it
-                    contentMinX = Math.max(0, options.targetCenter.x - OPTIMAL_VIEW_PADDING_CELLS);
-                    contentMaxX = Math.min(BOARD_SIZE - 1, options.targetCenter.x + OPTIMAL_VIEW_PADDING_CELLS);
-                    contentMinY = Math.max(0, options.targetCenter.y - OPTIMAL_VIEW_PADDING_CELLS);
-                    contentMaxY = Math.min(BOARD_SIZE - 1, options.targetCenter.y + OPTIMAL_VIEW_PADDING_CELLS);
+                if (options.targetCenter && options.visibleCells) {
+                    const targetVisibleCells = options.visibleCells;
+                    contentLogicalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
+                    contentLogicalHeight = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
+
+                    // Calculate the logical center of the target view around the last move
+                    // We want the targetCenter to be at the center of our targetVisibleCells x targetVisibleCells view.
+                    // The top-left corner of our target view in logical board coordinates:
+                    const targetViewLogicalX = options.targetCenter.x - (targetVisibleCells / 2);
+                    const targetViewLogicalY = options.targetCenter.y - (targetVisibleCells / 2);
+
+                    // Logical center of the target view on the internal canvas
+                    centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + (targetViewLogicalX + targetVisibleCells / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                    centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + (targetViewLogicalY + targetVisibleCells / 2) * INTERNAL_DRAWING_CELL_SIZE;
+
                 } else if (options.boundingBox) {
-                    // Otherwise, use the overall bounding box of pieces
-                    contentMinX = Math.max(0, options.boundingBox.minX - OPTIMAL_VIEW_PADDING_CELLS);
-                    contentMaxX = Math.min(BOARD_SIZE - 1, options.boundingBox.maxX + OPTIMAL_VIEW_PADDING_CELLS);
-                    contentMinY = Math.max(0, options.boundingBox.minY - OPTIMAL_VIEW_PADDING_CELLS);
-                    contentMaxY = Math.min(BOARD_SIZE - 1, options.boundingBox.maxY + OPTIMAL_VIEW_PADDING_CELLS);
+                    // Existing logic for bounding box
+                    const { minX, maxX, minY, maxY } = options.boundingBox;
+                    const paddedMinX = Math.max(0, minX - OPTIMAL_VIEW_PADDING_CELLS);
+                    const paddedMaxX = Math.min(BOARD_SIZE - 1, maxX + OPTIMAL_VIEW_PADDING_CELLS);
+                    const paddedMinY = Math.max(0, minY - OPTIMAL_VIEW_PADDING_CELLS);
+                    const paddedMaxY = Math.min(BOARD_SIZE - 1, maxY + OPTIMAL_VIEW_PADDING_CELLS);
+
+                    contentLogicalWidth = (paddedMaxX - paddedMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
+                    contentLogicalHeight = (paddedMaxY - paddedMinY + 1) * INTERNAL_DRAWING_CELL_SIZE;
+
+                    centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinX + paddedMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                    centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinY + paddedMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+
                 } else {
                     // Default to showing the initial mobile visible cells, centered
                     const mid = Math.floor(BOARD_SIZE / 2);
                     const halfVisible = Math.floor(INITIAL_MOBILE_VISIBLE_CELLS / 2);
-                    contentMinX = Math.max(0, mid - halfVisible);
-                    contentMaxX = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1); // -1 because it's a range
-                    contentMinY = Math.max(0, mid - halfVisible);
-                    contentMaxY = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1);
+                    const contentMinX = Math.max(0, mid - halfVisible);
+                    const contentMaxX = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1);
+                    const contentMinY = Math.max(0, mid - halfVisible);
+                    const contentMaxY = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1);
+
+                    contentLogicalWidth = (contentMaxX - contentMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
+                    contentLogicalHeight = (contentMaxY - contentMinY + 1) * INTERNAL_DRAWING_CELL_SIZE;
+
+                    centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinX + contentMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                    centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinY + contentMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
                 }
 
-                // Calculate logical internal drawing dimensions of the content area
-                const contentLogicalWidth = (contentMaxX - contentMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
-                const contentLogicalHeight = (contentMaxY - contentMinY + 1) * INTERNAL_DRAWING_CELL_SIZE;
-
                 // Calculate required scale to fit content within container's display area
-                let targetScaleX = containerWidth / (contentLogicalWidth * initialScaleFactor);
-                let targetScaleY = containerHeight / (contentLogicalHeight * initialScaleFactor);
-                let newScale = Math.min(targetScaleX, targetScaleY);
+                let newScale = Math.min(
+                    containerWidth / (contentLogicalWidth * initialScaleFactor),
+                    containerHeight / (contentLogicalHeight * initialScaleFactor)
+                );
 
                 // Clamp newScale to reasonable bounds (e.g., between 1.0 and 2.5)
-                // Reduced max scale from 3.0 to 2.5 to prevent excessive zoom
-                newScale = Math.max(1.0, Math.min(newScale, 2.5)); 
-
-                // Calculate center of the content area on the logical internal canvas
-                const centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinX + contentMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
-                const centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinY + contentMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                newScale = Math.max(1.0, Math.min(newScale, 2.5));
 
                 // Calculate target display coordinates of this center
                 const targetDisplayCenterX = centerLogicalX * newScale * initialScaleFactor;
@@ -1808,17 +1814,27 @@
                 applyTransform();
             }
 
-            // Update dynamic zoom for mobile (called after each move)
+            // Update dynamic zoom (called after each move)
             function updateDynamicZoom() {
-                if (!IS_MOBILE) return; // Only for mobile now, desktop will use a simpler approach
+                // This function will now always try to center on the last move with an 8x8 view on mobile.
+                // For desktop, we will keep it simple and just reset to full board view.
+                if (!IS_MOBILE) {
+                    // On desktop, after a move, reset to full board view for simplicity and clarity.
+                    scale = 1.0;
+                    translateX = 0;
+                    translateY = 0;
+                    clampPan();
+                    applyTransform();
+                    return;
+                }
 
                 let optimalView;
-                if (moveHistory.length > CROWDED_BOARD_THRESHOLD && lastMovePosition) {
-                    // If crowded, focus on the last move
-                    optimalView = calculateOptimalView({ targetCenter: lastMovePosition });
+                if (lastMovePosition) {
+                    // Always focus on the last move with an 8x8 view on mobile
+                    optimalView = calculateOptimalView({ targetCenter: lastMovePosition, visibleCells: 8 });
                 } else {
-                    // Otherwise, focus on the overall piece distribution
-                    optimalView = calculateOptimalView({ boundingBox: getPieceBoundingBox() });
+                    // If no moves yet (e.g., initial state on mobile), use the default initial view
+                    optimalView = calculateOptimalView(); // This will use INITIAL_MOBILE_VISIBLE_CELLS
                 }
                 
                 animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
