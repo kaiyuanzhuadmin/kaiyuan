@@ -570,8 +570,12 @@
             let lastMovePosition = null;
             let gameMode = 1; // 1: Player vs AI, 2: Player vs Player, 3: AI vs AI
             let gameCount = 1; // Game count
-            let playerStartsWithBlack = true; // Does player start with black?
+            let playerStartsWithBlack = true; // Does player start with black? (Only for Player vs AI)
             let undoChances = 0;
+            let isAiThinking = false; // NEW: Flag to prevent multiple AI moves
+
+            // Global variable to store AI roles for AI vs AI mode, dynamically assigned in initGame
+            let aiPlayerRoles = {}; 
 
             // Auto-zoom/pan variables
             let scale = 1.0;
@@ -801,16 +805,28 @@
                 gameOver = false;
                 moveHistory = [];
                 lastMovePosition = null;
+                isAiThinking = false; // Ensure AI thinking flag is reset at the start of a new game
                 
-                updateGameStatus();
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
                 
                 if (gameMode === 3) { // AI vs AI mode
-                    logMessage('开元 vs Kaiyuan 模式开始');
-                    // Set up the first AI player (AI1 is Black)
-                    currentPlayer = 1; 
-                    updateGameStatus();
+                    if (gameCount % 2 !== 0) { // Odd game count: 开元 (黑) vs Kaiyuan AI (白)
+                        aiPlayerRoles = {
+                            1: { name: '开元', color: '黑' },
+                            2: { name: 'Kaiyuan AI', color: '白' }
+                        };
+                        currentPlayer = 1; // 开元 (黑) starts
+                        logMessage('开元执黑先手');
+                    } else { // Even game count: Kaiyuan AI (黑) vs 开元 (白)
+                        aiPlayerRoles = {
+                            1: { name: 'Kaiyuan AI', color: '黑' },
+                            2: { name: '开元', color: '白' }
+                        };
+                        currentPlayer = 1; // Kaiyuan AI (黑) starts
+                        logMessage('Kaiyuan AI执黑先手');
+                    }
+                    updateGameStatus(); // Moved this call here
                     setTimeout(() => aiMove(), 1000); // Start AI game after a short delay
                 } else if (IS_MOBILE) {
                     // Mobile: Automatically zoom to 8x8 area and center at the start of the game
@@ -848,6 +864,11 @@
                     logMessage('玩家1执黑先手，请点击棋盘落子');
                 }
                 
+                // Only call updateGameStatus here if not handled by gameMode === 3 block
+                if (gameMode !== 3) { // This means gameMode is 1 or 2
+                    updateGameStatus(); 
+                }
+
                 winnerModal.style.display = 'none';
                 updateUndoChancesDisplay();
                 drawBoard();
@@ -1140,10 +1161,13 @@
             
             // AI move
             function aiMove() {
-                if (gameOver) return;
+                if (gameOver || isAiThinking) { // Check if AI is already thinking or game is over
+                    return;
+                }
+                isAiThinking = true; // Set flag to true at the start of AI's turn
                 
                 // Determine which AI is playing this turn
-                const currentAiPlayer = currentPlayer; // This will be 1 (Black) or 2 (White)
+                const currentAiPlayer = currentPlayer;
 
                 // thinkingIndicator.style.display = 'flex'; // Removed as per user request
                 
@@ -1229,6 +1253,7 @@
                             updateGameStatus(winnerMessage);
                             logMessage(`${winnerMessage}`);
                             showWinnerModal(winnerMessage);
+                            isAiThinking = false; // Clear flag even on game over
                             return;
                         }
                         
@@ -1238,6 +1263,7 @@
                             updateGameStatus('平局！');
                             logMessage('游戏结束，平局！');
                             showWinnerModal('平局！');
+                            isAiThinking = false; // Clear flag even on game over
                             return;
                         }
                         
@@ -1247,11 +1273,13 @@
 
                         // If in AI vs AI mode, immediately trigger the next AI move after a delay
                         if (gameMode === 3 && !gameOver) {
+                            // Only schedule the next AI move if the game is still ongoing
                             setTimeout(() => aiMove(), 1000); // Delay for observation
                         }
                     } else if (!move && !gameOver) {
                         console.warn("AI could not find a move, or game is already over.");
                     }
+                    isAiThinking = false; // Clear flag after AI move is complete
                     resetIdleTimer(); // Reset idle timer after AI move
                 }, thinkTime);
             }
@@ -1261,7 +1289,14 @@
                 if (gameMode === 2) {
                     return player === 1 ? '玩家1' : '玩家2';
                 } else if (gameMode === 3) { // New AI vs AI mode
-                    return player === 1 ? '开元 (黑)' : 'Kaiyuan AI (白)'; // Differentiate AI players
+                    // Ensure aiPlayerRoles is defined and has the player key
+                    if (aiPlayerRoles && aiPlayerRoles[player]) {
+                        const role = aiPlayerRoles[player];
+                        return `${role.name} (${role.color})`;
+                    } else {
+                        // Fallback or error handling if role is not found (shouldn't happen with correct flow)
+                        return `AI Player ${player}`;
+                    }
                 } else { // Player vs AI mode
                     if (playerStartsWithBlack) {
                         return player === 1 ? '玩家' : '开元';
@@ -1538,48 +1573,59 @@
                     gameStatus.textContent = message;
                     winnerInfo.classList.remove('hidden');
                     
-                    if (message.includes('玩家1') || (message.includes('玩家') && !message.includes('玩家2'))) {
-                        const isBlack = (gameMode === 1 && playerStartsWithBlack) || 
-                                       (gameMode === 2 && currentPlayer === 1);
-                        winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
-                        winnerText.textContent = gameMode === 2 ? '玩家1' : '玩家';
-                    } else if (message.includes('玩家2')) {
-                        const isBlack = gameMode === 2 && currentPlayer === 2;
-                        winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
-                        winnerText.textContent = '玩家2';
-                    } else if (message.includes('开元 (黑)')) { // Specific for AI vs AI
-                        winnerIndicator.className = `piece black`;
-                        winnerText.textContent = '开元 (黑)';
-                    } else if (message.includes('Kaiyuan AI (白)')) { // Specific for AI vs AI
-                        winnerIndicator.className = `piece white`;
-                        winnerText.textContent = 'Kaiyuan AI (白)';
-                    }
-                     else if (message.includes('开元')) {
-                        const isBlack = (gameMode === 1 && !playerStartsWithBlack);
-                        winnerIndicator.className = `piece ${isBlack ? 'black' : 'white'}`;
-                        winnerText.textContent = '开元';
+                    // Determine the winner's player number from the last move
+                    const winningPlayer = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1].player : null;
+
+                    if (winningPlayer !== null) {
+                        let winnerPieceColor;
+                        let winnerDisplayName;
+
+                        if (gameMode === 3) {
+                            // Ensure aiPlayerRoles is defined before accessing
+                            if (aiPlayerRoles && aiPlayerRoles[winningPlayer]) {
+                                const winnerRole = aiPlayerRoles[winningPlayer];
+                                winnerPieceColor = winnerRole.color === '黑' ? 'black' : 'white';
+                                winnerDisplayName = `${winnerRole.name} (${winnerRole.color})`;
+                            } else {
+                                // Fallback for unexpected state, though initGame should prevent this
+                                winnerPieceColor = winningPlayer === 1 ? 'black' : 'white';
+                                winnerDisplayName = `AI Player ${winningPlayer}`;
+                            }
+                        } else { // Player vs AI or Player vs Player
+                            winnerPieceColor = winningPlayer === 1 ? 'black' : 'white';
+                            winnerDisplayName = getPlayerName(winningPlayer); // Use getPlayerName for display
+                        }
+                        winnerIndicator.className = `piece ${winnerPieceColor}`;
+                        winnerText.textContent = winnerDisplayName;
                     } else {
+                        // Case for a draw or other non-player win scenarios (e.g., if message is "平局！")
                         winnerInfo.classList.add('hidden');
                     }
                 } else {
                     gameStatus.textContent = '游戏进行中';
                     winnerInfo.classList.add('hidden');
                     
-                    // Update current player indicator based on game mode
-                    const isCurrentPlayerBlack = currentPlayer === 1;
-                    currentPlayerIndicator.className = `piece ${isCurrentPlayerBlack ? 'black' : 'white'}`;
-                    
-                    if (gameMode === 2) {
-                        currentPlayerText.textContent = currentPlayer === 1 ? '玩家1' : '玩家2';
-                    } else if (gameMode === 3) { // AI vs AI mode
-                        currentPlayerText.textContent = currentPlayer === 1 ? '开元 (黑)' : 'Kaiyuan AI (白)';
-                    } else { // Player vs AI mode
-                        if (playerStartsWithBlack) {
-                            currentPlayerText.textContent = currentPlayer === 1 ? '玩家' : '开元';
+                    // Update current player indicator based on game mode and roles
+                    let currentPieceColor;
+                    let currentDisplayName;
+
+                    if (gameMode === 3) {
+                        // Ensure aiPlayerRoles is defined before accessing
+                        if (aiPlayerRoles && aiPlayerRoles[currentPlayer]) {
+                            const role = aiPlayerRoles[currentPlayer];
+                            currentPieceColor = role.color === '黑' ? 'black' : 'white';
+                            currentDisplayName = `${role.name} (${role.color})`;
                         } else {
-                            currentPlayerText.textContent = currentPlayer === 1 ? '开元' : '玩家';
+                            // Fallback for unexpected state, though initGame should prevent this
+                            currentPieceColor = currentPlayer === 1 ? 'black' : 'white';
+                            currentDisplayName = `AI Player ${currentPlayer}`;
                         }
+                    } else { // Player vs AI or Player vs Player
+                        currentPieceColor = currentPlayer === 1 ? 'black' : 'white';
+                        currentDisplayName = getPlayerName(currentPlayer);
                     }
+                    currentPlayerIndicator.className = `piece ${currentPieceColor}`;
+                    currentPlayerText.textContent = currentDisplayName;
                 }
             }
             
