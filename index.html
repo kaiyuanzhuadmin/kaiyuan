@@ -1486,8 +1486,8 @@
                 if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 800000; // Broken Four (can still win) (increased)
 
                 // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 480000; // Medium-high (increased)
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 450000; // Broken Live Three (increased)
+                if (pattern.includes('_PPP_')) return 600000; // Medium-high (increased)
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 550000; // Broken Live Three (increased)
 
                 // Blocked Three (can become blocked four)
                 if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100000; // Medium (increased)
