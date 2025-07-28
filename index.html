@@ -558,7 +558,7 @@
             const IS_MOBILE = window.innerWidth < 768; // Simple mobile detection
             const IDLE_TIMEOUT_MS = 2000; // 2 seconds idle for auto-fit (Increased from 1500ms)
             const AUTO_FIT_ANIMATION_DURATION = 100; // 0.1 seconds for auto-fit animation, as requested
-            const INITIAL_MOBILE_VISIBLE_CELLS = 8; // How many cells to show initially on mobile (e.g., 8x8 area)
+            const INITIAL_MOBILE_VISIBLE_CELLS = 9; // How many cells to show initially on mobile (e.g., 8x8 area)
             const OPTIMAL_VIEW_PADDING_CELLS = 1; // Increased padding around pieces for optimal view, from 2 to 3
             const CROWDED_BOARD_THRESHOLD = 12; // Number of pieces to consider board "crowded" for last move focus
 
@@ -1827,19 +1827,13 @@
                     centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinY + paddedMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
 
                 } else {
-                    // Default to showing the initial mobile visible cells, centered
-                    const mid = Math.floor(BOARD_SIZE / 2);
-                    const halfVisible = Math.floor(INITIAL_MOBILE_VISIBLE_CELLS / 2);
-                    const contentMinX = Math.max(0, mid - halfVisible);
-                    const contentMaxX = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1);
-                    const contentMinY = Math.max(0, mid - halfVisible);
-                    const contentMaxY = Math.min(BOARD_SIZE - 1, mid + halfVisible - 1);
+                    // Default to showing the initial mobile visible cells, centered on the board's center
+                    contentLogicalWidth = INITIAL_MOBILE_VISIBLE_CELLS * INTERNAL_DRAWING_CELL_SIZE;
+                    contentLogicalHeight = INITIAL_MOBILE_VISIBLE_CELLS * INTERNAL_DRAWING_CELL_SIZE;
 
-                    contentLogicalWidth = (contentMaxX - contentMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
-                    contentLogicalHeight = (contentMaxY - contentMinY + 1) * INTERNAL_DRAWING_CELL_SIZE;
-
-                    centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinX + contentMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
-                    centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((contentMinY + contentMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                    // The center of the entire board in logical coordinates
+                    centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + (BOARD_SIZE / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                    centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + (BOARD_SIZE / 2) * INTERNAL_DRAWING_CELL_SIZE;
                 }
 
                 // Calculate required scale to fit content within container's display area
