@@ -555,9 +555,9 @@
 
             // Auto-zoom/pan constants for mobile
             const IS_MOBILE = window.innerWidth < 768; // Simple mobile detection
-            const IDLE_TIMEOUT_MS = 2000; // 2 seconds idle for auto-fit
+            const IDLE_TIMEOUT_MS = 1500; // 2 seconds idle for auto-fit
             const AUTO_FIT_ANIMATION_DURATION = 100; // 0.1 seconds for auto-fit animation, as requested
-            const INITIAL_MOBILE_VISIBLE_CELLS = 8; // How many cells to show initially on mobile (e.g., 8x8 area)
+            const INITIAL_MOBILE_VISIBLE_CELLS = 9; // How many cells to show initially on mobile (e.g., 8x8 area)
             const OPTIMAL_VIEW_PADDING_CELLS = 1; // Increased padding around pieces for optimal view, from 2 to 3
             const CROWDED_BOARD_THRESHOLD = 12; // Number of pieces to consider board "crowded" for last move focus
 
