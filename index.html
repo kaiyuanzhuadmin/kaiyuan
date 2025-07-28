@@ -678,8 +678,8 @@
                 if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 150; // (Reduced score)
 
                 // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 18; // Reduced score
-                if (pattern.includes('__P_P__')) return 12; // (Reduced score)
+                if (pattern.includes('__PP__')) return 100; // Reduced score
+                if (pattern.includes('__P_P__')) return 82; // (Reduced score)
 
                 // Blocked Two
                 if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8; // (Reduced score)
