@@ -310,7 +310,8 @@
             height: auto;
             /* Allow hardware acceleration for smooth transformations */
             transform-origin: 0 0; /* Set transform origin to top-left */
-            transition: transform 1.2s ease-out; /* Add transition for smooth zoom/pan */
+            /* 加快落子时窗口缩放动画速度 */
+            transition: transform 0.5s ease-out; /* Adjusted transition duration */
         }
         
         @keyframes thinking {
@@ -555,9 +556,9 @@
 
             // Auto-zoom/pan constants for mobile
             const IS_MOBILE = window.innerWidth < 768; // Simple mobile detection
-            const IDLE_TIMEOUT_MS = 1500; // 2 seconds idle for auto-fit
+            const IDLE_TIMEOUT_MS = 2000; // 2 seconds idle for auto-fit (Increased from 1500ms)
             const AUTO_FIT_ANIMATION_DURATION = 100; // 0.1 seconds for auto-fit animation, as requested
-            const INITIAL_MOBILE_VISIBLE_CELLS = 9; // How many cells to show initially on mobile (e.g., 8x8 area)
+            const INITIAL_MOBILE_VISIBLE_CELLS = 8; // How many cells to show initially on mobile (e.g., 8x8 area)
             const OPTIMAL_VIEW_PADDING_CELLS = 1; // Increased padding around pieces for optimal view, from 2 to 3
             const CROWDED_BOARD_THRESHOLD = 12; // Number of pieces to consider board "crowded" for last move focus
 
@@ -573,6 +574,7 @@
             let playerStartsWithBlack = true; // Does player start with black? (Only for Player vs AI)
             let undoChances = 0;
             let isAiThinking = false; // NEW: Flag to prevent multiple AI moves
+            let isAnimatingZoom = false; // New flag to prevent moves during zoom animation
 
             // Global variable to store AI roles for AI vs AI mode, dynamically assigned in initGame
             let aiPlayerRoles = {}; 
@@ -806,6 +808,7 @@
                 moveHistory = [];
                 lastMovePosition = null;
                 isAiThinking = false; // Ensure AI thinking flag is reset at the start of a new game
+                isAnimatingZoom = false; // Reset zoom animation flag
                 
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
@@ -1094,8 +1097,11 @@
             
             // Handle player move
             function handlePlayerMove(x, y) {
-                // Prevent player input if game is over or in AI vs AI mode
-                if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3) { 
+                // Prevent player input if game is over, cell is occupied, in AI vs AI mode, or during zoom animation
+                if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3 || isAnimatingZoom) { 
+                    if (isAnimatingZoom) {
+                        logMessage('正在进行窗口缩放动画，请稍候再落子。');
+                    }
                     return;
                 }
                 
@@ -1294,7 +1300,7 @@
                         const role = aiPlayerRoles[player];
                         return `${role.name} (${role.color})`;
                     } else {
-                        // Fallback or error handling if role is not found (shouldn't happen with correct flow)
+                        // Fallback for unexpected state, though initGame should prevent this
                         return `AI Player ${player}`;
                     }
                 } else { // Player vs AI mode
@@ -1693,6 +1699,13 @@
             
             // Initialize game
             initGame();
+
+            // Listen for the end of the CSS transition on the canvas
+            canvas.addEventListener('transitionend', (event) => {
+                if (event.propertyName === 'transform') {
+                    isAnimatingZoom = false; // Zoom animation has finished
+                }
+            });
             
             // --- Zoom and Pan Logic ---
 
@@ -1851,6 +1864,7 @@
 
             // Function to smoothly animate to a target scale and position
             function animateToView(targetScale, targetX, targetY) {
+                isAnimatingZoom = true; // Set flag when animation starts
                 // The CSS transition property on #board handles the animation duration.
                 // We just update the target transform values.
                 scale = targetScale;
@@ -1858,6 +1872,14 @@
                 translateY = targetY;
                 clampPan(); // Ensure target values are within bounds
                 applyTransform();
+
+                // Fallback: Ensure isAnimatingZoom is reset after the transition duration
+                // This is a safety net in case transitionend doesn't fire for some reason.
+                // The CSS transition duration is 0.5s, so slightly longer than that.
+                setTimeout(() => {
+                    isAnimatingZoom = false;
+                    console.log('isAnimatingZoom reset by setTimeout'); // For debugging
+                }, 600); // 600ms, slightly longer than the 0.5s CSS transition
             }
 
             // Update dynamic zoom (called after each move)
@@ -1888,7 +1910,7 @@
 
             // Start auto-fit on idle
             function startAutoFit() {
-                if (!IS_MOBILE || isGestureActive) return; // Only for mobile and if no user interaction
+                if (!IS_MOBILE || isGestureActive || isAnimatingZoom) return; // Only for mobile and if no user interaction or active zoom animation
 
                 const boundingBox = getPieceBoundingBox();
                 const optimalView = calculateOptimalView({ boundingBox: boundingBox }); // Always fit all pieces on idle
@@ -1978,21 +2000,26 @@
 
                     // 判断是拖动还是点击落子
                     if (moveDistance < tapThreshold) {
-                        const rect = canvas.getBoundingClientRect();
-                        const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
-                        
-                        const clientX = releasedTouch.clientX;
-                        const clientY = releasedTouch.clientY;
+                        // Only allow move if not animating zoom
+                        if (!isAnimatingZoom) { 
+                            const rect = canvas.getBoundingClientRect();
+                            const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                            
+                            const clientX = releasedTouch.clientX;
+                            const clientY = releasedTouch.clientY;
 
-                        // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
-                        const logicalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
-                        const logicalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
+                            // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
+                            const logicalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
+                            const logicalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
 
-                        const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                        const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                        
-                        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                            handlePlayerMove(x, y);
+                            const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                            const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                            
+                            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                                handlePlayerMove(x, y);
+                            }
+                        } else {
+                            logMessage('正在进行窗口缩放动画，请稍候再落子。');
                         }
                     }
                 }
@@ -2020,21 +2047,26 @@
 
                     // 判断是拖动还是点击落子
                     if (moveDistance < tapThreshold) {
-                        const rect = canvas.getBoundingClientRect();
-                        const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
-                        
-                        const clientX = event.clientX;
-                        const clientY = event.clientY;
+                        // Only allow move if not animating zoom
+                        if (!isAnimatingZoom) {
+                            const rect = canvas.getBoundingClientRect();
+                            const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                            
+                            const clientX = event.clientX;
+                            const clientY = event.clientY;
 
-                        // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
-                        const logicalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
-                        const logicalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
+                            // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
+                            const logicalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
+                            const logicalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
 
-                        const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                        const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                        
-                        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                            handlePlayerMove(x, y);
+                            const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                            const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                            
+                            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                                handlePlayerMove(x, y);
+                            }
+                        } else {
+                            logMessage('正在进行窗口缩放动画，请稍候再落子。');
                         }
                     }
                     isGestureActive = false; // Reset gesture active flag after interaction ends
