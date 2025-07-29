@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>五子棋对弈</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>五子棋对弈 (云计算)</title>
     <link rel="icon" type="image/png" sizes="96x96" href="me.png">
     <link rel="preload" href="jasmine_flower.mp3" as="audio">
     <style>
-        /* Localized styles, replacing Tailwind CSS */
+        /* 样式与原版相同，此处为简洁省略... */
         * {
             margin: 0;
             padding: 0;
@@ -16,8 +16,7 @@
         
         body {
             font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif;
-            /* 设置护眼的基础背景色 */
-            background-color: #E0EEE0; /* 浅薄荷绿，护眼色 */
+            background-color: #E0EEE0;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -25,23 +24,22 @@
             justify-content: flex-start;
             padding: 0.5rem;
             margin: 0;
-            position: relative; /* 为背景叠加层提供定位上下文 */
-            overflow-y: auto; /* 允许内容超出时滚动 */
+            position: relative;
+            overflow-y: auto;
         }
 
-        /* 背景图片叠加层 */
         .background-overlay {
-            position: fixed; /* 固定在视口 */
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('forest.webp'); /* 确保 forest.webp 文件存在 */
-            background-size: cover; /* 覆盖整个区域 */
-            background-position: center; /* 居中显示 */
-            background-repeat: no-repeat; /* 不重复 */
-            opacity: 0.8; /* 设置不透明度为0.8 */
-            z-index: -1; /* 确保在内容下方，但在body背景色上方 */
+            background-image: url('forest.webp');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.8;
+            z-index: -1;
         }
         
         @media (min-width: 768px) {
@@ -55,7 +53,6 @@
             max-width: 80rem;
             width: 100%;
             margin: 0 auto;
-            /* 调整为半透明白色，使背景图可以透出 */
             background: rgba(255, 255, 255, 0.4); 
             border-radius: 0.5rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -63,7 +60,7 @@
             min-height: calc(100vh - 1rem);
             display: flex;
             flex-direction: column;
-            z-index: 1; /* 确保内容在背景叠加层之上 */
+            z-index: 1;
         }
         
         @media (min-width: 768px) {
@@ -276,47 +273,52 @@
             background: #d1d5db;
         }
         
-        /* Updated .board-container styles for enhanced aesthetics */
         .board-container {
             position: relative;
-            border-radius: 0.75rem; /* Slightly larger border-radius for a softer look */
+            border-radius: 0.75rem;
             overflow: hidden;
-            /* Enhanced box-shadow for depth and elegance */
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), /* Main shadow */
-                        0 6px 6px rgba(0, 0, 0, 0.15); /* Smaller, softer shadow */
-            border: 2px solid rgba(139, 90, 43, 0.7); /* Subtle border matching header color */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), 0 6px 6px rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(139, 90, 43, 0.7);
             width: fit-content;
             max-width: 100%;
             margin: 0 auto;
             display: flex;
             justify-content: center;
-            /* 设置棋盘容器背景为半透明白色，让背景图透出 */
             background-color: rgba(255, 255, 255, 0.6); 
-            touch-action: none; /* Disable default touch actions like scroll */
+            touch-action: none;
         }
         
         @media (max-width: 480px) {
             .board-container {
                 margin: 0 auto;
-                border-radius: 0.5rem; /* Adjusted for smaller screens */
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15); /* Adjusted shadow for smaller screens */
+                border-radius: 0.5rem;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
             }
         }
         
         #board {
-            background: #DEB887; /* 棋盘背景色 */
+            background: #DEB887;
             display: block;
             max-width: 100%;
             height: auto;
-            /* Allow hardware acceleration for smooth transformations */
-            transform-origin: 0 0; /* Set transform origin to top-left */
-            /* 加快落子时窗口缩放动画速度 */
-            transition: transform 0.5s ease-out; /* Adjusted transition duration */
+            transform-origin: 0 0;
+            transition: transform 0.5s ease-out;
         }
         
-        @keyframes thinking {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
+        @keyframes thinking-animation {
+            0% { content: "思考中"; }
+            25% { content: "思考中."; }
+            50% { content: "思考中.."; }
+            75% { content: "思考中..."; }
+            100% { content: "思考中"; }
+        }
+
+        .thinking-status::after {
+            content: "思考中";
+            animation: thinking-animation 1.5s linear infinite;
+            display: inline-block;
+            width: 4.5em;
+            text-align: left;
         }
         
         .game-log {
@@ -419,13 +421,12 @@
     </style>
 </head>
 <body>
-    <!-- Background image overlay -->
     <div class="background-overlay"></div>
 
     <div class="container">
         <header class="header">
-            <h1>五子棋对弈</h1>
-            <p>来场挑战，看谁能先连成五子 /•᷅•᷄\୭~</p>
+            <h1>五子棋对弈 (云计算)</h1>
+            <p>和开元来场挑战，看谁能先连成五子 /•᷅•᷄\୭~</p>
         </header>
 
         <main class="main">
@@ -522,7 +523,7 @@
         </main>
 
         <footer class="footer">
-            <p>五子棋游戏 &copy; 2025 | Designed by 开元</p>
+            <p>五子棋对弈 (云计算) &copy; 2025 | Designed by 开元</p>
         </footer>
     </div>
 
@@ -538,49 +539,341 @@
         <source src="jasmine_flower.mp3" type="audio/mp3">
     </audio>
 
+    <!-- ================================================================= -->
+    <!-- ======================= AI WEB WORKER SCRIPT ====================== -->
+    <!-- ================================================================= -->
+    <script id="ai-worker" type="javascript/worker">
+        // This script runs in a separate thread and will not block the UI.
+        
+        // Game constants (must be redefined in worker scope)
+        const BOARD_SIZE = 15;
+        let gameBoard; // Will be updated by message from main thread
+
+        // AI difficulty configuration (must be redefined in worker scope)
+        const difficultyConfig = {
+            1: { searchDepth: 4, randomMoveChance: 0.0 },
+            2: { searchDepth: 4, randomMoveChance: 0.0 },
+            3: { searchDepth: 4, randomMoveChance: 0.0 }
+        };
+
+        // --- All AI calculation functions are moved here ---
+        function evaluatePattern(pattern) {
+            // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
+            // Five in a row (winning condition)
+            if (pattern.includes('PPPPP')) return 100000;
+
+            // Live Four: _PPPP_
+            if (pattern.includes('_PPPP_')) return 10000;
+            if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 7000;
+            
+            // Blocked Four
+            if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1200;
+            if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 1800;
+
+            // Live Three: _PPP_
+            if (pattern.includes('_PPP_')) return 690;
+            if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660;
+
+            // Blocked Three
+            if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100;
+            if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 150;
+
+            // Live Two: __PP__
+            if (pattern.includes('__PP__')) return 100;
+            if (pattern.includes('__P_P__')) return 82;
+
+            // Blocked Two
+            if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8;
+            
+            // Live One
+            if (pattern.includes('_P_')) return 10;
+            
+            // Defensive evaluation (opponent's patterns)
+            const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
+            if (opponentPattern.includes('PPPPP')) return -900000;
+            if (opponentPattern.includes('_PPPP_')) return -40000;
+            if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -10000;
+            if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -10000;
+            if (opponentPattern.includes('_PPP_')) return -4500;
+            if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -4090;
+            if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -2600;
+            if (opponentPattern.includes('_PP_')) return -200;
+            
+            return 1;
+        }
+
+        function evaluatePosition(row, col, player) {
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+            let totalScore = 0;
+            const centerRow = Math.floor(BOARD_SIZE / 2);
+            const centerCol = Math.floor(BOARD_SIZE / 2);
+            const distanceFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
+            totalScore += Math.max(0, 10 - distanceFromCenter);
+            
+            directions.forEach(([dx, dy]) => {
+                let pattern = '';
+                for (let i = -4; i <= 4; i++) {
+                    const newRow = row + i * dx;
+                    const newCol = col + i * dy;
+                    if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE) {
+                        pattern += 'B';
+                    } else if (gameBoard[newRow][newCol] === player) {
+                        pattern += 'P';
+                    } else if (gameBoard[newRow][newCol] === 0) {
+                        pattern += '_';
+                    } else {
+                        pattern += 'O';
+                    }
+                }
+                const midIndex = 4;
+                pattern = pattern.substring(0, midIndex) + 'P' + pattern.substring(midIndex + 1);
+                totalScore += evaluatePattern(pattern);
+            });
+            return totalScore;
+        }
+
+        function checkWin(x, y, player) {
+            const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+            for (const [dx, dy] of directions) {
+                let count = 1;
+                for (let i = 1; i < 5; i++) {
+                    const nx = x + dx * i;
+                    const ny = y + dy * i;
+                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || gameBoard[nx][ny] !== player) break;
+                    count++;
+                }
+                for (let i = 1; i < 5; i++) {
+                    const nx = x - dx * i;
+                    const ny = y - dy * i;
+                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || gameBoard[nx][ny] !== player) break;
+                    count++;
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
+
+        function evaluateBoard(player) {
+            let totalScore = 0;
+            const opponent = player === 1 ? 2 : 1;
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (gameBoard[i][j] === player) {
+                        totalScore += evaluatePosition(i, j, player);
+                    } else if (gameBoard[i][j] === opponent) {
+                        totalScore -= evaluatePosition(i, j, opponent) * 3.0;
+                    }
+                }
+            }
+            return totalScore;
+        }
+
+        function getOrderedMoves(currentPlayer) {
+            const moves = [];
+            let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
+            let hasPieces = false;
+
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (gameBoard[i][j] !== 0) {
+                        hasPieces = true;
+                        minX = Math.min(minX, i);
+                        maxX = Math.max(maxX, i);
+                        minY = Math.min(minY, j);
+                        maxY = Math.max(maxY, j);
+                    }
+                }
+            }
+
+            if (!hasPieces) {
+                moves.push({ x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2), score: 0 });
+                return moves;
+            }
+
+            const searchMinX = Math.max(0, minX - 2);
+            const searchMaxX = Math.min(BOARD_SIZE - 1, maxX + 2);
+            const searchMinY = Math.max(0, minY - 2);
+            const searchMaxY = Math.min(BOARD_SIZE - 1, maxY + 2);
+
+            for (let i = searchMinX; i <= searchMaxX; i++) {
+                for (let j = searchMinY; j <= searchMaxY; j++) {
+                    if (gameBoard[i][j] === 0) {
+                        const scoreForPlayer = evaluatePosition(i, j, currentPlayer);
+                        const scoreForOpponent = evaluatePosition(i, j, currentPlayer === 1 ? 2 : 1);
+                        const combinedScore = scoreForPlayer + scoreForOpponent * 3.0;
+                        moves.push({ x: i, y: j, score: combinedScore });
+                    }
+                }
+            }
+            return moves.sort((a, b) => b.score - a.score).slice(0, 40);
+        }
+
+        function minimax(depth, alpha, beta, isMaximizingPlayer, player) {
+            if (depth === 0) {
+                return { score: evaluateBoard(player), move: null };
+            }
+            
+            const moves = getOrderedMoves(player);
+            if (moves.length === 0) return { score: 0, move: null };
+            
+            let bestMove = null;
+            
+            if (isMaximizingPlayer) {
+                let maxScore = -Infinity;
+                for (const move of moves) {
+                    gameBoard[move.x][move.y] = player;
+                    if (checkWin(move.x, move.y, player)) {
+                        gameBoard[move.x][move.y] = 0;
+                        return { score: 100000, move };
+                    }
+                    const result = minimax(depth - 1, alpha, beta, false, player === 1 ? 2 : 1);
+                    gameBoard[move.x][move.y] = 0;
+                    if (result.score > maxScore) {
+                        maxScore = result.score;
+                        bestMove = move;
+                    }
+                    alpha = Math.max(alpha, result.score);
+                    if (beta <= alpha) break;
+                }
+                return { score: maxScore, move: bestMove };
+            } else {
+                let minScore = Infinity;
+                for (const move of moves) {
+                    gameBoard[move.x][move.y] = player;
+                    if (checkWin(move.x, move.y, player)) {
+                        gameBoard[move.x][move.y] = 0;
+                        return { score: -100000, move };
+                    }
+                    const result = minimax(depth - 1, alpha, beta, true, player === 1 ? 2 : 1);
+                    gameBoard[move.x][move.y] = 0;
+                    if (result.score < minScore) {
+                        minScore = result.score;
+                        bestMove = move;
+                    }
+                    beta = Math.min(beta, result.score);
+                    if (beta <= alpha) break;
+                }
+                return { score: minScore, move: bestMove };
+            }
+        }
+
+        function findWinningMove(player) {
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (gameBoard[i][j] === 0) {
+                        gameBoard[i][j] = player;
+                        if (checkWin(i, j, player)) {
+                            gameBoard[i][j] = 0;
+                            return { x: i, y: j };
+                        }
+                        gameBoard[i][j] = 0;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function getBestMove(currentPlayer, difficulty) {
+            const config = difficultyConfig[difficulty];
+            
+            const winMove = findWinningMove(currentPlayer);
+            if (winMove) return winMove;
+            
+            const opponent = currentPlayer === 1 ? 2 : 1;
+            const blockMove = findWinningMove(opponent);
+            if (blockMove) return blockMove;
+            
+            const result = minimax(config.searchDepth, -Infinity, Infinity, true, currentPlayer);
+            if (result.move) {
+                return result.move;
+            }
+
+            // Fallback if minimax fails
+            const moves = getOrderedMoves(currentPlayer);
+            return moves.length > 0 ? moves[0] : null;
+        }
+
+        // Listen for messages from the main thread
+        self.onmessage = (e) => {
+            const { board, currentPlayer, difficulty, moveHistory } = e.data;
+            gameBoard = board; // Update the worker's board state
+
+            let move;
+            const config = difficultyConfig[difficulty];
+
+            // Restored: More nuanced opening move logic
+            if (moveHistory.length === 1) {
+                const playerFirstMove = moveHistory[0];
+                const candidateOpeningMoves = [];
+                const radius = 2;
+                for (let i = Math.max(0, playerFirstMove.x - radius); i <= Math.min(BOARD_SIZE - 1, playerFirstMove.x + radius); i++) {
+                    for (let j = Math.max(0, playerFirstMove.y - radius); j <= Math.min(BOARD_SIZE - 1, playerFirstMove.y + radius); j++) {
+                        if (gameBoard[i][j] === 0 && !(i === playerFirstMove.x && j === playerFirstMove.y)) {
+                            candidateOpeningMoves.push({ x: i, y: j });
+                        }
+                    }
+                }
+                const center = Math.floor(BOARD_SIZE / 2);
+                const maxDistanceFromCenter = 5;
+                const filteredCandidates = candidateOpeningMoves.filter(m => {
+                    const distFromCenter = Math.max(Math.abs(m.x - center), Math.abs(m.y - center));
+                    return distFromCenter <= maxDistanceFromCenter;
+                });
+                if (filteredCandidates.length > 0) {
+                    move = filteredCandidates[Math.floor(Math.random() * filteredCandidates.length)];
+                } else {
+                    move = getBestMove(currentPlayer, difficulty);
+                }
+            } else if (Math.random() < config.randomMoveChance) {
+                const moves = getOrderedMoves(currentPlayer);
+                move = moves.length > 0 ? moves[Math.floor(Math.random() * Math.min(moves.length, 5))] : null;
+            } else {
+                move = getBestMove(currentPlayer, difficulty);
+            }
+            
+            // Post the result back to the main thread
+            self.postMessage(move);
+        };
+    </script>
+    <!-- ================================================================= -->
+    <!-- ======================= MAIN GAME SCRIPT ======================== -->
+    <!-- ================================================================= -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Game constants
             const BOARD_SIZE = 15;
-            // Define internal drawing sizes for crispness
-            const INTERNAL_DRAWING_CELL_SIZE = 50; // Internal pixel size for each cell
+            const INTERNAL_DRAWING_CELL_SIZE = 50;
             const INTERNAL_DRAWING_PIECE_SIZE = INTERNAL_DRAWING_CELL_SIZE * 0.85;
             const INTERNAL_DRAWING_BOARD_PADDING = INTERNAL_DRAWING_CELL_SIZE;
             
-            // Calculate the fixed logical internal canvas dimensions
             const LOGICAL_CANVAS_WIDTH = (BOARD_SIZE - 1) * INTERNAL_DRAWING_CELL_SIZE + INTERNAL_DRAWING_BOARD_PADDING * 2;
-            const LOGICAL_CANVAS_HEIGHT = LOGICAL_CANVAS_WIDTH; // Board is square
+            const LOGICAL_CANVAS_HEIGHT = LOGICAL_CANVAS_WIDTH;
 
-            // Get device pixel ratio for high-DPI displays
             const devicePixelRatio = window.devicePixelRatio || 1;
 
-            // Auto-zoom/pan constants for mobile
-            const IS_MOBILE = window.innerWidth < 768; // Simple mobile detection
-            const IDLE_TIMEOUT_MS = 2000; // 2 seconds idle for auto-fit (Increased from 1500ms)
-            const AUTO_FIT_ANIMATION_DURATION = 100; // 0.1 seconds for auto-fit animation, as requested
-            const INITIAL_MOBILE_VISIBLE_CELLS = 9; // How many cells to show initially on mobile (e.g., 8x8 area)
-            const OPTIMAL_VIEW_PADDING_CELLS = 1; // Increased padding around pieces for optimal view, from 2 to 3
-            const CROWDED_BOARD_THRESHOLD = 12; // Number of pieces to consider board "crowded" for last move focus
+            // Restored: Auto-zoom/pan constants for mobile
+            const IS_MOBILE = window.innerWidth < 768;
+            const IDLE_TIMEOUT_MS = 2000;
+            const INITIAL_MOBILE_VISIBLE_CELLS = 9;
+            const OPTIMAL_VIEW_PADDING_CELLS = 1;
 
             // Game state
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
-            let currentPlayer = 1; // 1: Black, 2: White
+            let currentPlayer = 1;
             let gameOver = false;
-            let difficulty = 2; // 1: Easy, 2: Medium, 3: Hard
+            let difficulty = 2;
             let moveHistory = [];
             let lastMovePosition = null;
-            let gameMode = 1; // 1: Player vs AI, 2: Player vs Player, 3: AI vs AI
-            let gameCount = 1; // Game count
-            let playerStartsWithBlack = true; // Does player start with black? (Only for Player vs AI)
+            let gameMode = 1;
+            let gameCount = 1;
+            let playerStartsWithBlack = true;
             let undoChances = 0;
-            let isAiThinking = false; // NEW: Flag to prevent multiple AI moves
-            let isAnimatingZoom = false; // New flag to prevent moves during zoom animation
+            let isAiThinking = false;
+            let isAnimatingZoom = false;
+            let aiPlayerRoles = {};
 
-            // Global variable to store AI roles for AI vs AI mode, dynamically assigned in initGame
-            let aiPlayerRoles = {}; 
-
-            // Auto-zoom/pan variables
-            let scale = 0.5;
+            // Restored: Auto-zoom/pan variables
+            let scale = 1.0;
             let translateX = 0;
             let translateY = 0;
             let isDragging = false;
@@ -590,15 +883,11 @@
             let initialPinchScale = 1;
             let initialPinchMidX = 0;
             let initialPinchMidY = 0;
-            let isGestureActive = false; // Flag to indicate if a user zoom/pan gesture is active
-            let gestureTimeout = null;
+            let isGestureActive = false;
             let initialTouchX = 0;
             let initialTouchY = 0;
-            const tapThreshold = 10; // 触摸/点击的阈值，小于此距离认为是点击，否则是拖动
-
+            const tapThreshold = 10;
             let idleTimer = null;
-            let autoFitAnimationId = null;
-            let autoFitStartTime = 0;
             
             // DOM elements
             const canvas = document.getElementById('board');
@@ -628,153 +917,83 @@
             const musicText = document.getElementById('music-text');
             const redeemCodeInput = document.getElementById('redeem-code-input');
 
-            // --- OPTIMIZATION: Off-screen canvases ---
+            // Off-screen canvases
             const backgroundCanvas = document.createElement('canvas');
             const backgroundCtx = backgroundCanvas.getContext('2d');
             const piecesCanvas = document.createElement('canvas');
             const piecesCtx = piecesCanvas.getContext('2d');
-            // --- END OPTIMIZATION ---
 
-            // AI difficulty configuration
-            const difficultyConfig = {
-                1: { // Easy 简单
-                    searchDepth: 4, 
-                    randomMoveChance: 0.0, 
-                    thinkTimeRange: [400, 1500] 
-                },
-                2: { // Medium 中等
-                    searchDepth: 4, 
-                    randomMoveChance: 0.0, 
-                    thinkTimeRange: [800, 3500] 
-                },
-                3: { // Hard 困难
-                    searchDepth: 4, 
-                    randomMoveChance: 0.0, 
-                    thinkTimeRange: [1000, 5500] 
+            // AI Web Worker
+            let aiWorker;
+            function createWorker() {
+                try {
+                    const workerScript = document.getElementById('ai-worker').textContent;
+                    const blob = new Blob([workerScript], { type: 'application/javascript' });
+                    return new Worker(URL.createObjectURL(blob));
+                } catch (e) {
+                    console.error("无法创建 Web Worker:", e);
+                    logMessage("错误：无法初始化AI引擎。请刷新页面。");
+                    return null;
                 }
+            }
+            aiWorker = createWorker();
+
+            // AI difficulty configuration (for timing on main thread)
+            const difficultyConfig = {
+                1: { thinkTimeRange: [400, 1500] },
+                2: { thinkTimeRange: [800, 3500] },
+                3: { thinkTimeRange: [1000, 5500] }
             };
 
-            // Set Canvas internal drawing size once, scaled by devicePixelRatio for ultra-clear display
+            // Set Canvas size
             canvas.width = LOGICAL_CANVAS_WIDTH * devicePixelRatio;
             canvas.height = LOGICAL_CANVAS_HEIGHT * devicePixelRatio;
-            // --- OPTIMIZATION: Set off-screen canvas sizes ---
             backgroundCanvas.width = canvas.width;
             backgroundCanvas.height = canvas.height;
             piecesCanvas.width = canvas.width;
             piecesCanvas.height = canvas.height;
-            // --- END OPTIMIZATION ---
-
-            // Scale the drawing context to match the logical drawing units
+            
             ctx.scale(devicePixelRatio, devicePixelRatio);
-            // --- OPTIMIZATION: Scale off-screen canvas contexts ---
             backgroundCtx.scale(devicePixelRatio, devicePixelRatio);
             piecesCtx.scale(devicePixelRatio, devicePixelRatio);
-            // --- END OPTIMIZATION ---
 
-            // --- OPTIMIZATION: evaluatePattern function with reduced scores ---
-            function evaluatePattern(pattern) {
-                // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
-                // Further reduced scores to prevent computational strain and white screen flashes.
-                
-                // Winning/Very High Priority
-                if (pattern.includes('PPPPP')) return 50000; // Win
-
-                // High Priority Threats (Live Fours)
-                if (pattern.includes('_PPPP_')) return 10000; // Live Four
-                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 4000; // Broken Live Four
-
-                // Medium Priority Threats (Blocked Fours, Live Threes)
-                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 500; // Blocked Four
-                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 400; // Broken Blocked Four
-                if (pattern.includes('_PPP_')) return 240; // Live Three
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 210; // Broken Live Three
-
-                // Low Priority
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 50; // Blocked Three
-                if (pattern.includes('__PP__')) return 20; // Live Two
-                if (pattern.includes('__P_P__')) return 15;
-                if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 5; // Blocked Two
-                if (pattern.includes('_P_')) return 2; // Live One
-
-                // Defensive evaluation (opponent's patterns)
-                const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
-                
-                if (opponentPattern.includes('PPPPP')) return -80000; // Block opponent's win is top priority
-                if (opponentPattern.includes('_PPPP_')) return -15000; // Block opponent's Live Four
-                if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -4000; // Block opponent's Blocked Four
-                if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -3000;
-                if (opponentPattern.includes('_PPP_')) return -2300; // Block opponent's Live Three
-                if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -2100;
-                
-                return 0; // No significant pattern
-            }
-
-            // Professional Gomoku position evaluation function
-            function evaluatePosition(row, col, player) {
-                const directions = [
-                    [0, 1],   // Horizontal
-                    [1, 0],   // Vertical
-                    [1, 1],   // Main diagonal
-                    [1, -1]   // Anti-diagonal
-                ];
-                
-                let totalScore = 0;
-                
-                // Bonus for center position
-                const centerRow = Math.floor(BOARD_SIZE / 2);
-                const centerCol = Math.floor(BOARD_SIZE / 2);
-                const distanceFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
-                totalScore += Math.max(0, 10 - distanceFromCenter);
-                
-                directions.forEach(([dx, dy]) => {
-                    // Extract a 9-cell pattern (4 cells before and 4 cells after the current position)
-                    let pattern = '';
-                    for (let i = -4; i <= 4; i++) {
-                        const newRow = row + i * dx;
-                        const newCol = col + i * dy;
-                        
-                        if (newRow < 0 || newRow >= BOARD_SIZE || 
-                            newCol < 0 || newCol >= BOARD_SIZE) {
-                            pattern += 'B'; // Boundary
-                        } else if (gameBoard[newRow][newCol] === player) {
-                            pattern += 'P'; // Player's piece
-                        } else if (gameBoard[newRow][newCol] === 0) {
-                            pattern += '_'; // Empty
-                        } else {
-                            pattern += 'O'; // Opponent's piece
-                        }
+            // --- Main Thread Functions ---
+            
+            function checkWin(x, y, player) {
+                const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+                for (const [dx, dy] of directions) {
+                    let count = 1;
+                    for (let i = 1; i < 5; i++) {
+                        const nx = x + dx * i; const ny = y + dy * i;
+                        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || gameBoard[nx][ny] !== player) break;
+                        count++;
                     }
-                    
-                    // Evaluate with the current position set as the player's piece
-                    const midIndex = 4;
-                    pattern = pattern.substring(0, midIndex) + 'P' + pattern.substring(midIndex + 1);
-                    
-                    totalScore += evaluatePattern(pattern);
-                });
-                
-                return totalScore;
+                    for (let i = 1; i < 5; i++) {
+                        const nx = x - dx * i; const ny = y - dy * i;
+                        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || gameBoard[nx][ny] !== player) break;
+                        count++;
+                    }
+                    if (count >= 5) return true;
+                }
+                return false;
             }
 
-            // Calculate responsive display size for the canvas element
+            function isBoardFull() {
+                return gameBoard.every(row => row.every(cell => cell !== 0));
+            }
+
             function calculateResponsiveDisplaySize() {
                 const container = document.querySelector('.board-area');
                 const containerWidth = container.clientWidth;
-                
-                // Calculate available space, considering margins and padding
                 const maxDisplaySize = Math.min(containerWidth - 16, window.innerWidth - 32);
                 
-                // Set canvas CSS display size (not internal resolution)
                 canvas.style.width = `${maxDisplaySize}px`;
                 canvas.style.height = `${maxDisplaySize}px`;
-                
-                // Store initial scale for click event handling (ratio of CSS display size to logical internal drawing size)
                 canvas.dataset.initialScale = maxDisplaySize / LOGICAL_CANVAS_WIDTH;
                 
-                // Ensure correct container size
                 boardContainer.style.width = `${maxDisplaySize}px`;
                 boardContainer.style.height = `${maxDisplaySize}px`;
 
-                // On resize, if not mobile or at game start, reset zoom/pan
                 if (!IS_MOBILE || moveHistory.length === 0) {
                     scale = 1.0;
                     translateX = 0;
@@ -782,357 +1001,187 @@
                     clampPan();
                     applyTransform();
                 } else {
-                    // On mobile resize, re-evaluate optimal view to adjust to new container size
                     updateDynamicZoom(); 
                 }
             }
 
-            // Apply CSS transform for zoom and pan
             function applyTransform() {
                 canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
             }
             
-            // Initialize game
             function initGame() {
-                // Recalculate and apply display size on init as well
                 calculateResponsiveDisplaySize(); 
-                gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0)); // Clear board
+                gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
                 gameOver = false;
                 moveHistory = [];
                 lastMovePosition = null;
-                isAiThinking = false; // Ensure AI thinking flag is reset at the start of a new game
-                isAnimatingZoom = false; // Reset zoom animation flag
+                isAiThinking = false;
+                isAnimatingZoom = false;
                 
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
                 
-                // --- OPTIMIZATION: Draw static elements once ---
                 drawStaticBoard();
                 updatePiecesCanvas();
-                // --- END OPTIMIZATION ---
 
-                if (gameMode === 3) { // AI vs AI mode
-                    if (gameCount % 2 !== 0) { // Odd game count: 开元 (黑) vs Kaiyuan AI (白)
-                        aiPlayerRoles = {
-                            1: { name: '开元', color: '黑' },
-                            2: { name: 'Kaiyuan AI', color: '白' }
-                        };
-                        currentPlayer = 1; // 开元 (黑) starts
-                        logMessage('开元执黑先手');
-                    } else { // Even game count: Kaiyuan AI (黑) vs 开元 (白)
-                        aiPlayerRoles = {
-                            1: { name: 'Kaiyuan AI', color: '黑' },
-                            2: { name: '开元', color: '白' }
-                        };
-                        currentPlayer = 1; // Kaiyuan AI (黑) starts
-                        logMessage('Kaiyuan AI执黑先手');
+                if (gameMode === 3) {
+                    if (gameCount % 2 !== 0) {
+                        aiPlayerRoles = { 1: { name: '开元', color: '黑' }, 2: { name: 'Kaiyuan AI', color: '白' } };
+                        currentPlayer = 1; logMessage('开元执黑先手');
+                    } else {
+                        aiPlayerRoles = { 1: { name: 'Kaiyuan AI', color: '黑' }, 2: { name: '开元', color: '白' } };
+                        currentPlayer = 1; logMessage('Kaiyuan AI执黑先手');
                     }
-                    updateGameStatus(); // Moved this call here
-                    setTimeout(() => aiMove(), 1000); // Start AI game after a short delay
-                } else if (IS_MOBILE) {
-                    // Mobile: Automatically zoom to 8x8 area and center at the start of the game
-                    const optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS }); // Use the initial mobile cells constant
+                    updateGameStatus();
+                    setTimeout(() => aiMove(), 1000);
+                } else if (IS_MOBILE) { // Restored: Initial zoom for mobile
+                    const optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS });
                     scale = optimalView.scale;
                     translateX = optimalView.translateX;
                     translateY = optimalView.translateY;
-                    clampPan(); // Ensure it's clamped
-                    applyTransform();
-                } else {
-                    // Desktop: Ensure the entire board is visible and centered
-                    scale = 1.0;
-                    translateX = 0;
-                    translateY = 0;
                     clampPan();
                     applyTransform();
+                } else {
+                    scale = 1.0; translateX = 0; translateY = 0;
+                    clampPan(); applyTransform();
                 }
 
-                // Initial player setting based on mode
-                if (gameMode === 1) { // Player vs AI
+                if (gameMode === 1) {
                     if (playerStartsWithBlack) {
-                        currentPlayer = 1; // Player is black
-                        logMessage('玩家执黑先手，请点击棋盘落子');
+                        currentPlayer = 1; logMessage('玩家执黑先手，请点击棋盘落子');
                     } else {
-                        currentPlayer = 1; // AI is black
-                        logMessage('开元执黑先手');
-                        setTimeout(() => {
-                            if (!gameOver) {
-                                aiMove();
-                            }
-                        }, 500);
+                        currentPlayer = 1; logMessage('开元执黑先手');
+                        setTimeout(() => { if (!gameOver) aiMove(); }, 500);
                     }
-                } else if (gameMode === 2) { // Player vs Player
-                    currentPlayer = 1; // Player 1 is black
-                    logMessage('玩家1执黑先手，请点击棋盘落子');
+                } else if (gameMode === 2) {
+                    currentPlayer = 1; logMessage('玩家1执黑先手，请点击棋盘落子');
                 }
                 
-                // Only call updateGameStatus here if not handled by gameMode === 3 block
-                if (gameMode !== 3) { // This means gameMode is 1 or 2
-                    updateGameStatus(); 
-                }
+                if (gameMode !== 3) updateGameStatus(); 
 
                 winnerModal.style.display = 'none';
                 updateUndoChancesDisplay();
                 drawBoard();
-                resetIdleTimer(); // Start idle timer
+                resetIdleTimer();
             }
 
-            // --- OPTIMIZATION: New function to draw static board elements to the background canvas ---
             function drawStaticBoard() {
-                // Clear the background canvas
                 backgroundCtx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-
-                // Draw board background with a subtle wood texture effect
                 const boardGradient = backgroundCtx.createLinearGradient(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-                boardGradient.addColorStop(0, '#DEB887'); // Light wood
-                boardGradient.addColorStop(1, '#C19A6B'); // Darker wood
+                boardGradient.addColorStop(0, '#DEB887'); boardGradient.addColorStop(1, '#C19A6B');
                 backgroundCtx.fillStyle = boardGradient;
                 backgroundCtx.fillRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-
-                // Draw grid lines
-                backgroundCtx.strokeStyle = '#8B4513'; // Darker brown for lines
-                backgroundCtx.lineWidth = 1.5; // Slightly thicker lines for better visibility
+                backgroundCtx.strokeStyle = '#8B4513'; backgroundCtx.lineWidth = 1.5;
 
                 for (let i = 0; i < BOARD_SIZE; i++) {
-                    // Horizontal lines
                     backgroundCtx.beginPath();
                     backgroundCtx.moveTo(INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
                     backgroundCtx.lineTo(LOGICAL_CANVAS_WIDTH - INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
                     backgroundCtx.stroke();
-                    
-                    // Vertical lines
                     backgroundCtx.beginPath();
                     backgroundCtx.moveTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, INTERNAL_DRAWING_BOARD_PADDING);
                     backgroundCtx.lineTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, LOGICAL_CANVAS_HEIGHT - INTERNAL_DRAWING_BOARD_PADDING);
                     backgroundCtx.stroke();
                 }
-
-                // Draw star points
-                const starPoints = [
-                    {x: 3, y: 3}, {x: 3, y: 11}, 
-                    {x: 7, y: 7}, // Center point
-                    {x: 11, y: 3}, {x: 11, y: 11}
-                ];
-                
-                starPoints.forEach(point => {
-                    drawStarPoint(point.x, point.y, backgroundCtx);
-                });
+                const starPoints = [{x: 3, y: 3}, {x: 3, y: 11}, {x: 7, y: 7}, {x: 11, y: 3}, {x: 11, y: 11}];
+                starPoints.forEach(point => drawStarPoint(point.x, point.y, backgroundCtx));
             }
 
-            // --- OPTIMIZATION: New function to update the pieces canvas ---
             function updatePiecesCanvas() {
-                // Clear the pieces canvas
                 piecesCtx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-                
-                // Draw all pieces from the gameBoard state onto the pieces canvas
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 1) {
-                            drawPiece(i, j, 'black', 1, piecesCtx);
-                        } else if (gameBoard[i][j] === 2) {
-                            drawPiece(i, j, 'white', 1, piecesCtx);
-                        }
+                        if (gameBoard[i][j] === 1) drawPiece(i, j, 'black', 1, piecesCtx);
+                        else if (gameBoard[i][j] === 2) drawPiece(i, j, 'white', 1, piecesCtx);
                     }
                 }
             }
             
-            // --- OPTIMIZATION & FIX: Modified drawBoard to be much faster and prevent offset ---
             function drawBoard() {
-                // Clear the main canvas using logical coordinates
                 ctx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-                
-                // --- FIX: Use the explicit drawImage signature to prevent scaling/offset issues ---
-                // Draw the pre-rendered background and pieces canvases, specifying the destination size in logical pixels.
                 ctx.drawImage(backgroundCanvas, 0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 ctx.drawImage(piecesCanvas, 0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-                // --- END FIX ---
-                
-                // Draw marker for the last move on top
-                if (lastMovePosition) {
-                    drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
-                }
+                if (lastMovePosition) drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
             }
             
-            // Draw star point with improved aesthetics
             function drawStarPoint(x, y, targetCtx) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const radius = 4;
-                
-                // Draw a subtle shadow
                 targetCtx.beginPath();
                 targetCtx.arc(centerX + 1, centerY + 1, radius, 0, 2 * Math.PI);
-                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                targetCtx.fill();
-
-                // Draw the star point itself
+                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.3)'; targetCtx.fill();
                 targetCtx.beginPath();
                 targetCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                targetCtx.fillStyle = '#8B4513'; // Darker brown
-                targetCtx.fill();
+                targetCtx.fillStyle = '#8B4513'; targetCtx.fill();
             }
             
-            // Draw piece with enhanced aesthetics and optional scale for animation
             function drawPiece(x, y, color, pieceScale = 1, targetCtx = ctx) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const currentPieceSize = INTERNAL_DRAWING_PIECE_SIZE * pieceScale;
-
-                // Draw subtle shadow for depth
                 targetCtx.beginPath();
                 targetCtx.arc(centerX + 2 * pieceScale, centerY + 2 * pieceScale, currentPieceSize / 2, 0, 2 * Math.PI);
-                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Slightly darker shadow
-                targetCtx.fill();
-                
-                // Draw piece with radial gradient for glossy effect
+                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.25)'; targetCtx.fill();
                 targetCtx.beginPath();
                 targetCtx.arc(centerX, centerY, currentPieceSize / 2, 0, 2 * Math.PI);
-                
-                // Create radial gradient for a more polished look
                 const gradient = targetCtx.createRadialGradient(
-                    centerX - currentPieceSize / 4, centerY - currentPieceSize / 4, currentPieceSize / 10, // Highlight source
-                    centerX, centerY, currentPieceSize / 2 // End of gradient
+                    centerX - currentPieceSize / 4, centerY - currentPieceSize / 4, currentPieceSize / 10,
+                    centerX, centerY, currentPieceSize / 2
                 );
-                
                 if (color === 'white') {
-                    gradient.addColorStop(0, '#FFFFFF'); // Bright white highlight
-                    gradient.addColorStop(0.7, '#F0F0F0'); // Light grey
-                    gradient.addColorStop(1, '#E0E0E0'); // Darker grey for edge
+                    gradient.addColorStop(0, '#FFFFFF'); gradient.addColorStop(0.7, '#F0F0F0'); gradient.addColorStop(1, '#E0E0E0');
                     targetCtx.strokeStyle = '#D9D9D9';
                 } else {
-                    gradient.addColorStop(0, '#404040'); // Dark grey highlight
-                    gradient.addColorStop(0.7, '#1A1A1A'); // Darker grey
-                    gradient.addColorStop(1, '#000000'); // Pure black for edge
+                    gradient.addColorStop(0, '#404040'); gradient.addColorStop(0.7, '#1A1A1A'); gradient.addColorStop(1, '#000000');
                     targetCtx.strokeStyle = '#333333';
                 }
-                
-                targetCtx.fillStyle = gradient;
-                targetCtx.fill();
-                targetCtx.lineWidth = 1;
-                targetCtx.stroke();
+                targetCtx.fillStyle = gradient; targetCtx.fill();
+                targetCtx.lineWidth = 1; targetCtx.stroke();
             }
 
-            // Animate piece placement
             function animatePiecePlacement(x, y, playerColor, callback) {
                 let animationStartTime = null;
-                const animationDuration = 200; // milliseconds
-
+                const animationDuration = 200;
                 function animate(currentTime) {
-                    if (!animationStartTime) {
-                        animationStartTime = currentTime;
-                    }
+                    if (!animationStartTime) animationStartTime = currentTime;
                     const elapsedTime = currentTime - animationStartTime;
-                    const progress = Math.min(elapsedTime / animationDuration, 1); // Progress from 0 to 1
-
-                    // Calculate scale: starts small, grows to full size
+                    const progress = Math.min(elapsedTime / animationDuration, 1);
                     const pieceAnimationScale = 0.5 + (0.5 * progress);
-
-                    // Redraw the board from off-screen canvases
                     drawBoard();
-                    // Then draw the animating piece directly on the main canvas
                     drawPiece(x, y, playerColor, pieceAnimationScale, ctx);
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        // Animation finished, update the pieces canvas and draw final state
+                    if (progress < 1) requestAnimationFrame(animate);
+                    else {
                         updatePiecesCanvas();
                         drawBoard();
-                        if (callback) callback(); // Execute callback after animation
+                        if (callback) callback();
                     }
                 }
                 requestAnimationFrame(animate);
             }
             
-            // Draw marker for the last move with a more distinct look
             function drawLastMoveMarker(x, y) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const radius = INTERNAL_DRAWING_PIECE_SIZE / 4;
-                
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#FF4500'; // Orange-red marker for better contrast
-                ctx.shadowColor = 'rgba(255, 69, 0, 0.7)'; // Glow effect
-                ctx.shadowBlur = 8; // Blur for the glow
+                ctx.fillStyle = '#FF4500';
+                ctx.shadowColor = 'rgba(255, 69, 0, 0.7)'; ctx.shadowBlur = 8;
                 ctx.fill();
-                ctx.shadowColor = 'transparent'; // Reset shadow
-                ctx.shadowBlur = 0; // Reset shadow
+                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             }
             
-            // Check for win
-            function checkWin(x, y, player) {
-                const directions = [
-                    [1, 0],   // Horizontal
-                    [0, 1],   // Vertical
-                    [1, 1],   // Diagonal (down-right)
-                    [1, -1]   // Diagonal (up-right)
-                ];
-                
-                for (const [dx, dy] of directions) {
-                    let count = 1;
-                    
-                    // Check in positive direction
-                    for (let i = 1; i < 5; i++) {
-                        const nx = x + dx * i;
-                        const ny = y + dy * i;
-                        
-                        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) break;
-                        if (gameBoard[nx][ny] !== player) break;
-                        
-                        count++;
-                    }
-                    
-                    // Check in negative direction
-                    for (let i = 1; i < 5; i++) {
-                        const nx = x - dx * i;
-                        const ny = y - dy * i;
-                        
-                        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) break;
-                        if (gameBoard[nx][ny] !== player) break;
-                        
-                        count++;
-                    }
-                    
-                    if (count >= 5) {
-                        return true;
-                    }
-                }
-                
-                return false;
-            }
-            
-            // Check if board is full
-            function isBoardFull() {
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 0) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-            
-            // Handle player move
             function handlePlayerMove(x, y) {
-                // Prevent player input if game is over, cell is occupied, in AI vs AI mode, or during zoom animation
-                if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3 || isAnimatingZoom) { 
-                    if (isAnimatingZoom) {
-                        logMessage('正在进行窗口缩放动画，请稍候再落子。');
-                    }
+                if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3 || isAnimatingZoom || isAiThinking) {
+                    if (isAnimatingZoom) logMessage('正在进行窗口缩放动画，请稍候再落子。');
+                    if (isAiThinking) logMessage('AI正在思考，请稍候。');
                     return;
                 }
                 
-                // Check if it's player's turn (only relevant for Player vs AI)
-                const isPlayerTurn = (gameMode === 1 && playerStartsWithBlack && currentPlayer === 1) || 
-                                     (gameMode === 1 && !playerStartsWithBlack && currentPlayer === 2) ||
-                                     (gameMode === 2); // In Player vs Player, both are players
+                const isPlayerTurn = (gameMode === 1 && ((playerStartsWithBlack && currentPlayer === 1) || (!playerStartsWithBlack && currentPlayer === 2))) || (gameMode === 2);
+                if (!isPlayerTurn) return;
                 
-                if (!isPlayerTurn) {
-                    return; // Not player's turn
-                }
-                
-                // Record move
                 gameBoard[x][y] = currentPlayer;
                 moveHistory.push({x, y, player: currentPlayer});
                 lastMovePosition = {x, y};
@@ -1141,12 +1190,8 @@
                 const pieceColor = currentPlayer === 1 ? '黑' : '白';
                 logMessage(`${playerName}在(${x+1},${y+1})落${pieceColor}子`);
                 
-                // Animate piece placement and then continue game logic in the callback
                 animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white', () => {
-                    // This code runs AFTER the animation is complete
-                    updateDynamicZoom(); 
-
-                    // Check if player wins
+                    updateDynamicZoom(); // Restored: Update zoom after move
                     if (checkWin(x, y, currentPlayer)) {
                         gameOver = true;
                         const winnerMessage = `${playerName}获胜！`;
@@ -1155,8 +1200,6 @@
                         showWinnerModal(winnerMessage);
                         return;
                     }
-                    
-                    // Check if board is full
                     if (isBoardFull()) {
                         gameOver = true;
                         updateGameStatus('平局！');
@@ -1164,496 +1207,136 @@
                         showWinnerModal('平局！');
                         return;
                     }
-                    
-                    // Switch player
                     currentPlayer = currentPlayer === 1 ? 2 : 1;
                     updateGameStatus();
-                    
-                    // If AI vs Player and it's AI's turn
                     if (gameMode === 1) {
-                        const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
-                                       (!playerStartsWithBlack && currentPlayer === 1);
-                        
-                        if (isAiTurn) {
-                            aiMove();
-                        }
+                        const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || (!playerStartsWithBlack && currentPlayer === 1);
+                        if (isAiTurn) aiMove();
                     }
-                    resetIdleTimer(); // Reset idle timer after a move
+                    resetIdleTimer();
                 });
             }
             
-            // AI move
             function aiMove() {
-                if (gameOver || isAiThinking) { // Check if AI is already thinking or game is over
-                    return;
-                }
-                isAiThinking = true; // Set flag to true at the start of AI's turn
+                if (gameOver || isAiThinking) return;
                 
-                // Determine which AI is playing this turn
-                const currentAiPlayer = currentPlayer;
-                
-                const config = difficultyConfig[difficulty];
-                const thinkTime = config.thinkTimeRange[0] + 
-                                Math.random() * (config.thinkTimeRange[1] - config.thinkTimeRange[0]);
-                
-                // Record start time for AI thinking
+                isAiThinking = true;
                 const aiStartTime = performance.now();
+                
+                const currentAiPlayer = currentPlayer;
+                const aiName = getPlayerName(currentAiPlayer);
+                updateGameStatus(`${aiName} 💭`);
+                gameStatus.classList.add('thinking-status');
+
+                const config = difficultyConfig[difficulty];
+                const thinkTime = config.thinkTimeRange[0] + Math.random() * (config.thinkTimeRange[1] - config.thinkTimeRange[0]);
 
                 setTimeout(() => {
-                    let move;
-                    
-                    // New logic for AI's first move to ensure flexibility
-                    if (moveHistory.length === 1) { 
-                        const playerFirstMove = moveHistory[0];
-                        const candidateOpeningMoves = [];
-                        const radius = 2; // Search within 2 cells of player's first move
+                    aiWorker.postMessage({
+                        board: gameBoard,
+                        currentPlayer: currentAiPlayer,
+                        difficulty: difficulty,
+                        moveHistory: moveHistory
+                    });
+                }, thinkTime);
 
-                        // Iterate around the player's first move
-                        for (let i = Math.max(0, playerFirstMove.x - radius); i <= Math.min(BOARD_SIZE - 1, playerFirstMove.x + radius); i++) {
-                            for (let j = Math.max(0, playerFirstMove.y - radius); j <= Math.min(BOARD_SIZE - 1, playerFirstMove.y + radius); j++) {
-                                if (gameBoard[i][j] === 0) { // If the cell is empty
-                                    if (!(i === playerFirstMove.x && j === playerFirstMove.y)) {
-                                        candidateOpeningMoves.push({ x: i, y: j });
-                                    }
-                                }
-                            }
-                        }
+                aiWorker.onmessage = (e) => {
+                    const move = e.data;
+                    isAiThinking = false;
+                    gameStatus.classList.remove('thinking-status');
 
-                        const center = Math.floor(BOARD_SIZE / 2);
-                        const maxDistanceFromCenter = 5; 
-                        const filteredCandidates = candidateOpeningMoves.filter(m => {
-                            const distFromCenter = Math.max(Math.abs(m.x - center), Math.abs(m.y - center));
-                            return distFromCenter <= maxDistanceFromCenter; 
-                        });
-
-                        if (filteredCandidates.length > 0) {
-                            move = filteredCandidates[Math.floor(Math.random() * filteredCandidates.length)];
-                        } else {
-                            move = getBestMove(); 
-                        }
-                    } else if (Math.random() < config.randomMoveChance) {
-                        move = getRandomGoodMove(); // Make a 'good enough' random move
-                    } else {
-                        move = getBestMove(); // Use Minimax for subsequent moves
-                    }
-                    
                     if (move && !gameOver) {
                         const {x, y} = move;
-                        
-                        // Record AI move
-                        gameBoard[x][y] = currentAiPlayer; // Use currentAiPlayer for the move
+                        gameBoard[x][y] = currentAiPlayer;
                         moveHistory.push({x, y, player: currentAiPlayer});
                         lastMovePosition = {x, y};
                         
-                        const aiName = getPlayerName(currentAiPlayer); // Get name based on currentAiPlayer
                         const pieceColor = currentAiPlayer === 1 ? '黑' : '白';
-                        
-                        // Calculate AI thinking duration
                         const aiEndTime = performance.now();
-                        const duration = (aiEndTime - aiStartTime) / 1000; // Convert to seconds
+                        const duration = (aiEndTime - aiStartTime) / 1000;
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子 (用时 ${duration.toFixed(2)} 秒)`);
 
-                        // Animate piece placement and continue game logic in callback
                         animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white', () => {
-                            updateDynamicZoom(); 
-                            
-                            // Check if AI wins
+                            updateDynamicZoom(); // Restored: Update zoom after AI move
                             if (checkWin(x, y, currentAiPlayer)) {
                                 gameOver = true;
                                 const winnerMessage = `${aiName}获胜！`;
                                 updateGameStatus(winnerMessage);
-                                logMessage(`${winnerMessage}`);
                                 showWinnerModal(winnerMessage);
-                                isAiThinking = false; // Clear flag even on game over
                                 return;
                             }
-                            
-                            // Check if board is full
                             if (isBoardFull()) {
                                 gameOver = true;
                                 updateGameStatus('平局！');
-                                logMessage('游戏结束，平局！');
                                 showWinnerModal('平局！');
-                                isAiThinking = false; // Clear flag even on game over
                                 return;
                             }
-                            
-                            // Switch to next player
                             currentPlayer = currentAiPlayer === 1 ? 2 : 1;
                             updateGameStatus();
-
-                            // If in AI vs AI mode, immediately trigger the next AI move after a delay
                             if (gameMode === 3 && !gameOver) {
-                                setTimeout(() => aiMove(), 1000); // Delay for observation
+                                setTimeout(() => aiMove(), 1000);
                             }
-                            isAiThinking = false; // Clear flag after AI move is complete
-                            resetIdleTimer(); // Reset idle timer after AI move
+                            resetIdleTimer();
                         });
-                    } else {
-                        if (!move && !gameOver) {
-                            console.warn("AI could not find a move, or game is already over.");
-                        }
-                        isAiThinking = false; // Clear flag if no move is made
+                    } else if (!gameOver) {
+                        console.warn("AI worker returned no move.");
+                        updateGameStatus();
                     }
-                }, thinkTime);
+                };
+                
+                aiWorker.onerror = (e) => {
+                    console.error(`Error from AI worker:`, e);
+                    logMessage("AI计算出错，请刷新重试。");
+                    isAiThinking = false;
+                    gameStatus.classList.remove('thinking-status');
+                    updateGameStatus();
+                };
             }
             
-            // Get player name
             function getPlayerName(player) {
-                if (gameMode === 2) {
-                    return player === 1 ? '玩家1' : '玩家2';
-                } else if (gameMode === 3) { // New AI vs AI mode
+                if (gameMode === 2) return player === 1 ? '玩家1' : '玩家2';
+                if (gameMode === 3) {
                     if (aiPlayerRoles && aiPlayerRoles[player]) {
                         const role = aiPlayerRoles[player];
                         return `${role.name} (${role.color})`;
-                    } else {
-                        return `AI Player ${player}`;
                     }
-                } else { // Player vs AI mode
-                    if (playerStartsWithBlack) {
-                        return player === 1 ? '玩家' : '开元';
-                    } else {
-                        return player === 1 ? '开元' : '玩家';
-                    }
+                    return `AI Player ${player}`;
                 }
+                return playerStartsWithBlack ? (player === 1 ? '玩家' : '开元') : (player === 1 ? '开元' : '玩家');
             }
             
-            // --- OPTIMIZATION: Get best move with dynamic search depth ---
-            function getBestMove() {
-                const config = difficultyConfig[difficulty];
-                
-                // First, check for immediate win or block moves
-                const winMove = findWinningMove(currentPlayer);
-                if (winMove) return winMove;
-                
-                const opponent = currentPlayer === 1 ? 2 : 1;
-                const blockMove = findWinningMove(opponent);
-                if (blockMove) return blockMove;
-
-                // --- OPTIMIZATION: Dynamic Search Depth ---
-                let currentDepth = config.searchDepth;
-                const pieceCount = moveHistory.length;
-                // Reduce search depth as the game progresses to maintain performance
-                if (pieceCount > 25) {
-                    currentDepth = Math.max(2, config.searchDepth - 2);
-                } else if (pieceCount > 15) {
-                    currentDepth = Math.max(2, config.searchDepth - 1);
-                }
-                // --- END OPTIMIZATION ---
-                
-                // Use Minimax algorithm to search for the best move
-                const result = minimax(currentDepth, -Infinity, Infinity, true, currentPlayer);
-                
-                if (result.move) {
-                    return result.move;
-                }
-                
-                // Fallback to a random good move if minimax fails
-                return getRandomGoodMove();
-            }
-            
-            // --- OPTIMIZATION: Minimax algorithm with faster win/slower loss preference ---
-            function minimax(depth, alpha, beta, isMaximizingPlayer, player) {
-                if (depth === 0 || gameOver) {
-                    return {
-                        score: evaluateBoard(player),
-                        move: null
-                    };
-                }
-                
-                const moves = getOrderedMoves();
-                if (moves.length === 0) return { score: 0, move: null };
-                
-                let bestMove = null;
-                
-                if (isMaximizingPlayer) {
-                    let maxScore = -Infinity;
-                    
-                    for (const move of moves) {
-                        gameBoard[move.x][move.y] = player;
-                        
-                        if (checkWin(move.x, move.y, player)) {
-                            gameBoard[move.x][move.y] = 0;
-                            // A win found at a higher depth (sooner) is better.
-                            return { score: 50000 + depth, move }; 
-                        }
-                        
-                        const result = minimax(depth - 1, alpha, beta, false, player === 1 ? 2 : 1);
-                        gameBoard[move.x][move.y] = 0; // Undo move
-                        
-                        if (result.score > maxScore) {
-                            maxScore = result.score;
-                            bestMove = move;
-                        }
-                        
-                        alpha = Math.max(alpha, result.score);
-                        if (beta <= alpha) break; // Pruning
-                    }
-                    
-                    return { score: maxScore, move: bestMove };
-                } else { // Minimizing player
-                    let minScore = Infinity;
-                    
-                    for (const move of moves) {
-                        gameBoard[move.x][move.y] = player;
-                        
-                        if (checkWin(move.x, move.y, player)) {
-                            gameBoard[move.x][move.y] = 0;
-                            // A loss found at a higher depth (sooner) is worse.
-                            return { score: -50000 - depth, move }; 
-                        }
-                        
-                        const result = minimax(depth - 1, alpha, beta, true, player === 1 ? 2 : 1);
-                        gameBoard[move.x][move.y] = 0; // Undo move
-                        
-                        if (result.score < minScore) {
-                            minScore = result.score;
-                            bestMove = move;
-                        }
-                        
-                        beta = Math.min(beta, result.score);
-                        if (beta <= alpha) break; // Pruning
-                    }
-                    
-                    return { score: minScore, move: bestMove };
-                }
-            }
-            
-            // --- OPTIMIZATION: Get ordered candidate moves with reduced count and adjusted weights ---
-            function getOrderedMoves() {
-                const moves = [];
-                let hasPieces = false;
-
-                // Define search area around existing pieces
-                let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] !== 0) {
-                            hasPieces = true;
-                            minX = Math.min(minX, i);
-                            maxX = Math.max(maxX, i);
-                            minY = Math.min(minY, j);
-                            maxY = Math.max(maxY, j);
-                        }
-                    }
-                }
-
-                if (!hasPieces) {
-                    moves.push({ x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2), score: 1 });
-                    return moves;
-                }
-
-                // Expand search area by 2 cells
-                const searchMinX = Math.max(0, minX - 2);
-                const searchMaxX = Math.min(BOARD_SIZE - 1, maxX + 2);
-                const searchMinY = Math.max(0, minY - 2);
-                const searchMaxY = Math.min(BOARD_SIZE - 1, maxY + 2);
-
-                for (let i = searchMinX; i <= searchMaxX; i++) {
-                    for (let j = searchMinY; j <= searchMaxY; j++) {
-                        if (gameBoard[i][j] === 0) {
-                            const scoreForPlayer = evaluatePosition(i, j, currentPlayer);
-                            const scoreForOpponent = evaluatePosition(i, j, currentPlayer === 1 ? 2 : 1);
-                            
-                            // Give slightly more weight to blocking opponent's threats.
-                            const combinedScore = scoreForPlayer + scoreForOpponent * 1.5; 
-                            if (combinedScore > 0) {
-                                moves.push({ x: i, y: j, score: combinedScore });
-                            }
-                        }
-                    }
-                }
-                
-                // Sort by score and limit to the top 30 moves to improve performance.
-                return moves.sort((a, b) => b.score - a.score).slice(0, 30);
-            }
-            
-            // Check if position has adjacent pieces (within a 2-unit radius)
-            function hasAdjacentPieces(x, y) {
-                for (let i = Math.max(0, x-2); i <= Math.min(BOARD_SIZE-1, x+2); i++) {
-                    for (let j = Math.max(0, y-2); j <= Math.min(BOARD_SIZE-1, y+2); j++) {
-                        if (gameBoard[i][j] !== 0) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-            
-            // Find a winning move
-            function findWinningMove(player) {
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 0) {
-                            gameBoard[i][j] = player;
-                            if (checkWin(i, j, player)) {
-                                gameBoard[i][j] = 0; // Undo the move
-                                return { x: i, y: j };
-                            }
-                            gameBoard[i][j] = 0; // Undo the move
-                        }
-                    }
-                }
-                return null;
-            }
-            
-            // Evaluate the entire board state
-            function evaluateBoard(player) {
-                let totalScore = 0;
-                const opponent = player === 1 ? 2 : 1;
-                
-                // Iterate through all cells to find patterns
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === player) {
-                            totalScore += evaluatePosition(i, j, player);
-                        } else if (gameBoard[i][j] === opponent) {
-                            // --- OPTIMIZATION: Adjusted opponent weight to be consistent ---
-                            totalScore -= evaluatePosition(i, j, opponent) * 1.5; 
-                        }
-                    }
-                }
-                
-                return totalScore;
-            }
-            
-            // Get pattern string around a position
-            function getPattern(x, y, dx, dy, player) {
-                let pattern = '';
-                const opponent = player === 1 ? 2 : 1;
-                
-                // Check 4 cells in both directions (-4 to +4 relative to current position)
-                for (let i = -4; i <= 4; i++) {
-                    const nx = x + dx * i;
-                    const ny = y + dy * i;
-                    
-                    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
-                        pattern += 'B'; // Boundary or blocked by edge
-                    } else if (gameBoard[nx][ny] === player) {
-                        pattern += 'P'; // Player's piece
-                    } else if (gameBoard[nx][ny] === opponent) {
-                        pattern += 'O'; // Opponent's piece
-                    } else {
-                        pattern += '_'; // Empty space
-                    }
-                }
-                
-                return pattern;
-            }
-            
-            // Get a random 'good enough' move for easier difficulties
-            function getRandomGoodMove() {
-                const moves = [];
-                
-                // Prioritize moves near existing pieces
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 0 && hasAdjacentPieces(i, j)) {
-                            moves.push({ x: i, y: j });
-                        }
-                    }
-                }
-                
-                if (moves.length === 0) {
-                    // Fallback to any random move if no adjacent spots are found
-                    return getRandomMove();
-                }
-                
-                // Select a random move from the 'good' candidates
-                return moves[Math.floor(Math.random() * moves.length)];
-            }
-            
-            // Get a purely random move (fallback)
-            function getRandomMove() {
-                const moves = [];
-                for (let i = 0; i < BOARD_SIZE; i++) {
-                    for (let j = 0; j < BOARD_SIZE; j++) {
-                        if (gameBoard[i][j] === 0) {
-                            moves.push({ x: i, y: j });
-                        }
-                    }
-                }
-                if (moves.length > 0) {
-                    return moves[Math.floor(Math.random() * moves.length)];
-                }
-                return null;
-            }
-            
-            // Update game status UI
             function updateGameStatus(message) {
                 gameCountDisplay.textContent = `第 ${gameCount} 局`;
-                
                 if (message) {
                     gameStatus.textContent = message;
-                    winnerInfo.classList.remove('hidden');
-                    
-                    // Determine the winner's player number from the last move
-                    const winningPlayer = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1].player : null;
-
-                    if (winningPlayer !== null) {
-                        let winnerPieceColor;
-                        let winnerDisplayName;
-
-                        if (gameMode === 3) {
-                            // Ensure aiPlayerRoles is defined before accessing
-                            if (aiPlayerRoles && aiPlayerRoles[winningPlayer]) {
-                                const winnerRole = aiPlayerRoles[winningPlayer];
-                                winnerPieceColor = winnerRole.color === '黑' ? 'black' : 'white';
-                                winnerDisplayName = `${winnerRole.name} (${winnerRole.color})`;
-                            } else {
-                                // Fallback for unexpected state, though initGame should prevent this
-                                winnerPieceColor = winningPlayer === 1 ? 'black' : 'white';
-                                winnerDisplayName = `AI Player ${winningPlayer}`;
-                            }
-                        } else { // Player vs AI or Player vs Player
-                            winnerPieceColor = winningPlayer === 1 ? 'black' : 'white';
-                            winnerDisplayName = getPlayerName(winningPlayer); // Use getPlayerName for display
+                    if (gameOver) {
+                        winnerInfo.classList.remove('hidden');
+                        const winningPlayer = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1].player : null;
+                        if (winningPlayer !== null) {
+                            let winnerPieceColor = winningPlayer === 1 ? 'black' : 'white';
+                            let winnerDisplayName = getPlayerName(winningPlayer);
+                            winnerIndicator.className = `piece ${winnerPieceColor}`;
+                            winnerText.textContent = winnerDisplayName;
+                        } else {
+                            winnerInfo.classList.add('hidden');
                         }
-                        winnerIndicator.className = `piece ${winnerPieceColor}`;
-                        winnerText.textContent = winnerDisplayName;
-                    } else {
-                        // Case for a draw or other non-player win scenarios (e.g., if message is "平局！")
-                        winnerInfo.classList.add('hidden');
                     }
                 } else {
                     gameStatus.textContent = '游戏进行中';
                     winnerInfo.classList.add('hidden');
-                    
-                    // Update current player indicator based on game mode and roles
-                    let currentPieceColor;
-                    let currentDisplayName;
-
-                    if (gameMode === 3) {
-                        // Ensure aiPlayerRoles is defined before accessing
-                        if (aiPlayerRoles && aiPlayerRoles[currentPlayer]) {
-                            const role = aiPlayerRoles[currentPlayer];
-                            currentPieceColor = role.color === '黑' ? 'black' : 'white';
-                            currentDisplayName = `${role.name} (${role.color})`;
-                        } else {
-                            // Fallback for unexpected state, though initGame should prevent this
-                            currentPieceColor = currentPlayer === 1 ? 'black' : 'white';
-                            currentDisplayName = `AI Player ${currentPlayer}`;
-                        }
-                    } else { // Player vs AI or Player vs Player
-                        currentPieceColor = currentPlayer === 1 ? 'black' : 'white';
-                        currentDisplayName = getPlayerName(currentPlayer);
-                    }
+                    let currentPieceColor = currentPlayer === 1 ? 'black' : 'white';
+                    let currentDisplayName = getPlayerName(currentPlayer);
                     currentPlayerIndicator.className = `piece ${currentPieceColor}`;
                     currentPlayerText.textContent = currentDisplayName;
                 }
             }
             
-            // Start a new game
             function startNewGame() {
                 gameCount++;
-                // Alternate black/white start for player vs AI
-                if (gameMode === 1) {
-                    playerStartsWithBlack = !playerStartsWithBlack;
-                }
+                if (gameMode === 1) playerStartsWithBlack = !playerStartsWithBlack;
                 initGame();
             }
             
-            // Log game messages
             function logMessage(message) {
                 const logEntry = document.createElement('p');
                 logEntry.textContent = message;
@@ -1661,24 +1344,13 @@
                 gameLog.scrollTop = gameLog.scrollHeight;
             }
             
-            // Clear game log
-            function clearGameLog() {
-                gameLog.innerHTML = '';
-            }
-            
-            // Show winner modal
+            function clearGameLog() { gameLog.innerHTML = ''; }
             function showWinnerModal(message) {
                 winnerModalTitle.textContent = '游戏结束';
                 winnerModalMessage.textContent = message;
                 winnerModal.style.display = 'block';
             }
-
-            // Update undo chances display
-            function updateUndoChancesDisplay() {
-                undoChancesDisplay.textContent = undoChances;
-            }
-
-            // Handle redeem code submission
+            function updateUndoChancesDisplay() { undoChancesDisplay.textContent = undoChances; }
             function handleRedeemCode() {
                 const code = redeemCodeInput.value.trim().toLowerCase();
                 if (code === 'kaiyuan') {
@@ -1688,55 +1360,14 @@
                 } else {
                     logMessage('兑换码无效。');
                 }
-                redeemCodeInput.value = ''; // Clear input field
+                redeemCodeInput.value = '';
             }
             
-            // Music play/pause functionality
-            musicToggle.addEventListener('click', () => {
-                if (music.paused) {
-                    music.play().catch(() => {
-                        // Handle audio playback failure
-                        logMessage('音乐播放失败');
-                    });
-                    musicText.textContent = '播放';
-                } else {
-                    music.pause();
-                    musicText.textContent = '暂停';
-                }
-            });
-            
-            // Initialize game
-            initGame();
-
-            // Listen for the end of the CSS transition on the canvas
-            canvas.addEventListener('transitionend', (event) => {
-                if (event.propertyName === 'transform') {
-                    isAnimatingZoom = false; // Zoom animation has finished
-                }
-            });
-            
-            // --- Zoom and Pan Logic ---
-
-            // Helper to get distance between two touches
-            function getDistance(touch1, touch2) {
-                const dx = touch1.clientX - touch2.clientX;
-                const dy = touch1.clientY - touch2.clientY;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            // Helper to get midpoint of two touches
-            function getMidpoint(touch1, touch2) {
-                return {
-                    x: (touch1.clientX + touch2.clientX) / 2,
-                    y: (touch1.clientY + touch2.clientY) / 2
-                };
-            }
-
-            // Function to clamp pan values within board boundaries
+            // --- Restored: Zoom, Pan, and Auto-Fit Logic ---
             function clampPan() {
-                // Use LOGICAL_CANVAS_WIDTH/HEIGHT for display calculations
-                const currentDisplayWidth = LOGICAL_CANVAS_WIDTH * scale * parseFloat(canvas.dataset.initialScale);
-                const currentDisplayHeight = LOGICAL_CANVAS_HEIGHT * scale * parseFloat(canvas.dataset.initialScale);
+                const initialScaleFactor = parseFloat(canvas.dataset.initialScale) || 1;
+                const currentDisplayWidth = LOGICAL_CANVAS_WIDTH * scale * initialScaleFactor;
+                const currentDisplayHeight = LOGICAL_CANVAS_HEIGHT * scale * initialScaleFactor;
                 const containerWidth = boardContainer.clientWidth;
                 const containerHeight = boardContainer.clientHeight;
 
@@ -1745,472 +1376,279 @@
                 let minYBound = containerHeight - currentDisplayHeight;
                 let maxYBound = 0;
 
-                // If the scaled board is smaller than the container, center it
                 if (currentDisplayWidth < containerWidth) {
-                    translateX = (containerWidth - currentDisplayWidth) / 2;
-                    minXBound = translateX;
-                    maxXBound = translateX;
+                    minXBound = (containerWidth - currentDisplayWidth) / 2;
+                    maxXBound = minXBound;
                 }
                 if (currentDisplayHeight < containerHeight) {
-                    translateY = (containerHeight - currentDisplayHeight) / 2;
-                    minYBound = translateY;
-                    maxYBound = translateY;
+                    minYBound = (containerHeight - currentDisplayHeight) / 2;
+                    maxYBound = minYBound;
                 }
                 
                 translateX = Math.max(minXBound, Math.min(maxXBound, translateX));
                 translateY = Math.max(minYBound, Math.min(maxYBound, translateY));
             }
 
-            // --- Auto-Fit and Idle Logic ---
             function resetIdleTimer() {
-                if (!IS_MOBILE) return; // Only for mobile
+                if (!IS_MOBILE) return;
                 clearTimeout(idleTimer);
-                // No need to cancel autoFitAnimationId here, as it's managed by animateToView
-                // and the transition property on #board
                 idleTimer = setTimeout(startAutoFit, IDLE_TIMEOUT_MS);
             }
 
-            // Helper function to get bounding box of all placed pieces
             function getPieceBoundingBox() {
                 if (moveHistory.length === 0) {
-                    // If no pieces, return center of the board with a small default bounding box
-                    // This ensures initial zoom focuses on the center
                     const mid = Math.floor(BOARD_SIZE / 2);
                     return { minX: mid, maxX: mid, minY: mid, maxY: mid };
                 }
-
                 let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
-                for (const move of moveHistory) {
-                    minX = Math.min(minX, move.x);
-                    maxX = Math.max(maxX, move.x);
-                    minY = Math.min(minY, move.y);
-                    maxY = Math.max(maxY, move.y);
-                }
+                moveHistory.forEach(move => {
+                    minX = Math.min(minX, move.x); maxX = Math.max(maxX, move.x);
+                    minY = Math.min(minY, move.y); maxY = Math.max(maxY, move.y);
+                });
                 return { minX, maxX, minY, maxY };
             }
 
-            /**
-             * Helper function to calculate optimal view (scale and pan) for a given area.
-             * Can focus on a specific target center or the overall bounding box of pieces.
-             * @param {Object} [options] - Configuration options.
-             * @param {Object} [options.targetCenter] - {x, y} coordinates to center the view around.
-             * @param {number} [options.visibleCells] - The number of cells to make visible (e.g., 8 for 8x8 view).
-             * @param {Object} [options.boundingBox] - {minX, maxX, minY, maxY} for overall piece distribution.
-             */
             function calculateOptimalView(options = {}) {
                 const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                 const containerWidth = boardContainer.clientWidth;
                 const containerHeight = boardContainer.clientHeight;
-
-                let contentLogicalWidth, contentLogicalHeight;
-                let centerLogicalX, centerLogicalY;
+                let contentLogicalWidth, contentLogicalHeight, centerLogicalX, centerLogicalY;
 
                 if (options.targetCenter && options.visibleCells) {
                     const targetVisibleCells = options.visibleCells;
                     contentLogicalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
                     contentLogicalHeight = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
-
-                    // Calculate the logical center of the target view around the last move
-                    // We want the targetCenter to be at the center of our targetVisibleCells x targetVisibleCells view.
-                    // The top-left corner of our target view in logical board coordinates:
                     const targetViewLogicalX = options.targetCenter.x - (targetVisibleCells / 2);
                     const targetViewLogicalY = options.targetCenter.y - (targetVisibleCells / 2);
-
-                    // Logical center of the target view on the internal canvas
                     centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + (targetViewLogicalX + targetVisibleCells / 2) * INTERNAL_DRAWING_CELL_SIZE;
                     centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + (targetViewLogicalY + targetVisibleCells / 2) * INTERNAL_DRAWING_CELL_SIZE;
-
                 } else if (options.boundingBox) {
-                    // Existing logic for bounding box
                     const { minX, maxX, minY, maxY } = options.boundingBox;
                     const paddedMinX = Math.max(0, minX - OPTIMAL_VIEW_PADDING_CELLS);
                     const paddedMaxX = Math.min(BOARD_SIZE - 1, maxX + OPTIMAL_VIEW_PADDING_CELLS);
                     const paddedMinY = Math.max(0, minY - OPTIMAL_VIEW_PADDING_CELLS);
                     const paddedMaxY = Math.min(BOARD_SIZE - 1, maxY + OPTIMAL_VIEW_PADDING_CELLS);
-
                     contentLogicalWidth = (paddedMaxX - paddedMinX + 1) * INTERNAL_DRAWING_CELL_SIZE;
                     contentLogicalHeight = (paddedMaxY - paddedMinY + 1) * INTERNAL_DRAWING_CELL_SIZE;
-
                     centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinX + paddedMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
                     centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinY + paddedMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
-
                 } else {
-                    // Default to showing the initial mobile visible cells, centered on the board's center
                     contentLogicalWidth = INITIAL_MOBILE_VISIBLE_CELLS * INTERNAL_DRAWING_CELL_SIZE;
                     contentLogicalHeight = INITIAL_MOBILE_VISIBLE_CELLS * INTERNAL_DRAWING_CELL_SIZE;
-
-                    // The center of the entire board in logical coordinates
-                    centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + (BOARD_SIZE / 2) * INTERNAL_DRAWING_CELL_SIZE;
-                    centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + (BOARD_SIZE / 2) * INTERNAL_DRAWING_CELL_SIZE;
+                    centerLogicalX = LOGICAL_CANVAS_WIDTH / 2;
+                    centerLogicalY = LOGICAL_CANVAS_HEIGHT / 2;
                 }
 
-                // Calculate required scale to fit content within container's display area
-                let newScale = Math.min(
-                    containerWidth / (contentLogicalWidth * initialScaleFactor),
-                    containerHeight / (contentLogicalHeight * initialScaleFactor)
-                );
-
-                // Clamp newScale to reasonable bounds (e.g., between 1.0 and 2.5)
+                let newScale = Math.min(containerWidth / (contentLogicalWidth * initialScaleFactor), containerHeight / (contentLogicalHeight * initialScaleFactor));
                 newScale = Math.max(1.0, Math.min(newScale, 2.5));
-
-                // Calculate target display coordinates of this center
                 const targetDisplayCenterX = centerLogicalX * newScale * initialScaleFactor;
                 const targetDisplayCenterY = centerLogicalY * newScale * initialScaleFactor;
-
-                // Calculate translation to center this target display center within the container
                 const newTranslateX = containerWidth / 2 - targetDisplayCenterX;
                 const newTranslateY = containerHeight / 2 - targetDisplayCenterY;
-
                 return { scale: newScale, translateX: newTranslateX, translateY: newTranslateY };
             }
 
-            // Function to smoothly animate to a target scale and position
             function animateToView(targetScale, targetX, targetY) {
-                isAnimatingZoom = true; // Set flag when animation starts
-                // The CSS transition property on #board handles the animation duration.
-                // We just update the target transform values.
-                scale = targetScale;
-                translateX = targetX;
-                translateY = targetY;
-                clampPan(); // Ensure target values are within bounds
+                isAnimatingZoom = true;
+                scale = targetScale; translateX = targetX; translateY = targetY;
+                clampPan();
                 applyTransform();
-
-                // Fallback: Ensure isAnimatingZoom is reset after the transition duration
-                // This is a safety net in case transitionend doesn't fire for some reason.
-                // The CSS transition duration is 0.5s, so slightly longer than that.
-                setTimeout(() => {
-                    isAnimatingZoom = false;
-                }, 600); // 600ms, slightly longer than the 0.5s CSS transition
+                // Fallback to ensure flag is reset
+                setTimeout(() => { isAnimatingZoom = false; }, 600);
             }
 
-            // Update dynamic zoom (called after each move)
             function updateDynamicZoom() {
-                // This function will now always try to center on the last move with an 8x8 view on mobile.
-                // For desktop, we will keep it simple and just reset to full board view.
                 if (!IS_MOBILE) {
-                    // On desktop, after a move, reset to full board view for simplicity and clarity.
-                    scale = 1.0;
-                    translateX = 0;
-                    translateY = 0;
-                    clampPan();
-                    applyTransform();
+                    animateToView(1.0, 0, 0);
                     return;
                 }
-
                 let optimalView;
                 if (lastMovePosition) {
-                    // Always focus on the last move with an 8x8 view on mobile
                     optimalView = calculateOptimalView({ targetCenter: lastMovePosition, visibleCells: 8 });
                 } else {
-                    // If no moves yet (e.g., initial state on mobile), use the default initial view
-                    optimalView = calculateOptimalView(); // This will use INITIAL_MOBILE_VISIBLE_CELLS
+                    optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS });
                 }
-                
                 animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
             }
 
-            // Start auto-fit on idle
             function startAutoFit() {
-                if (!IS_MOBILE || isGestureActive || isAnimatingZoom) return; // Only for mobile and if no user interaction or active zoom animation
-
+                if (!IS_MOBILE || isGestureActive || isAnimatingZoom) return;
                 const boundingBox = getPieceBoundingBox();
-                const optimalView = calculateOptimalView({ boundingBox: boundingBox }); // Always fit all pieces on idle
+                const optimalView = calculateOptimalView({ boundingBox: boundingBox });
                 animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
-                
-                // 手机客户端无操作时，自动滑动到棋盘区域
                 boardContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
+            function getDistance(t1, t2) { return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2)); }
+            function getMidpoint(t1, t2) { return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 }; }
 
-            canvas.addEventListener('touchstart', (event) => {
-                if (IS_MOBILE) {
-                    event.preventDefault(); 
-                    isGestureActive = true; // 用户正在交互
-                    clearTimeout(idleTimer); // 停止空闲计时器
-                    // No need to cancel autoFitAnimationId here, as the transition property handles it.
-                }
+            // --- Event Listeners and Initialization ---
 
-                if (event.touches.length === 1) {
+            initGame();
+
+            canvas.addEventListener('transitionend', (event) => {
+                if (event.propertyName === 'transform') isAnimatingZoom = false;
+            });
+
+            canvas.addEventListener('touchstart', (e) => {
+                if (IS_MOBILE) { e.preventDefault(); isGestureActive = true; clearTimeout(idleTimer); }
+                if (e.touches.length === 1) {
                     isDragging = true;
-                    lastPanX = event.touches[0].clientX;
-                    lastPanY = event.touches[0].clientY;
-                    initialTouchX = event.touches[0].clientX;
-                    initialTouchY = event.touches[0].clientY;
-                } else if (event.touches.length === 2) {
+                    lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+                    initialTouchX = e.touches[0].clientX; initialTouchY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
                     isDragging = false;
-                    initialPinchDistance = getDistance(event.touches[0], event.touches[1]);
+                    initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
                     initialPinchScale = scale;
-                    
                     const rect = canvas.getBoundingClientRect();
-                    const midpoint = getMidpoint(event.touches[0], event.touches[1]);
-                    
-                    // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
-                    initialPinchMidX = (midpoint.x - rect.left) / (scale * parseFloat(canvas.dataset.initialScale));
-                    initialPinchMidY = (midpoint.y - rect.top) / (scale * parseFloat(canvas.dataset.initialScale));
+                    const midpoint = getMidpoint(e.touches[0], e.touches[1]);
+                    const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                    initialPinchMidX = (midpoint.x - rect.left) / (scale * initialScaleFactor);
+                    initialPinchMidY = (midpoint.y - rect.top) / (scale * initialScaleFactor);
                 }
             }, { passive: false });
 
-            canvas.addEventListener('touchmove', (event) => {
-                if (IS_MOBILE) {
-                    event.preventDefault();
-                    isGestureActive = true; // 用户正在交互
-                }
-
-                if (event.touches.length === 1 && isDragging) {
-                    const currentX = event.touches[0].clientX;
-                    const currentY = event.touches[0].clientY;
-
-                    translateX += (currentX - lastPanX);
-                    translateY += (currentY - lastPanY);
-
-                    lastPanX = currentX;
-                    lastPanY = currentY;
-
-                    clampPan();
-                    applyTransform();
-                } else if (event.touches.length === 2) {
-                    const currentPinchDistance = getDistance(event.touches[0], event.touches[1]);
+            canvas.addEventListener('touchmove', (e) => {
+                if (IS_MOBILE) { e.preventDefault(); isGestureActive = true; }
+                if (e.touches.length === 1 && isDragging) {
+                    translateX += (e.touches[0].clientX - lastPanX);
+                    translateY += (e.touches[0].clientY - lastPanY);
+                    lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+                    clampPan(); applyTransform();
+                } else if (e.touches.length === 2) {
+                    const currentPinchDistance = getDistance(e.touches[0], e.touches[1]);
                     let newScale = initialPinchScale * (currentPinchDistance / initialPinchDistance);
-
-                    newScale = Math.max(1.0, Math.min(newScale, 2.5)); // Adjusted max scale to 2.5
-
+                    newScale = Math.max(1.0, Math.min(newScale, 2.5));
                     const rect = canvas.getBoundingClientRect();
-                    const currentMidpoint = getMidpoint(event.touches[0], event.touches[1]);
-
-                    // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
-                    translateX = currentMidpoint.x - rect.left - (initialPinchMidX * newScale * parseFloat(canvas.dataset.initialScale));
-                    translateY = currentMidpoint.y - rect.top - (initialPinchMidY * newScale * parseFloat(canvas.dataset.initialScale));
-
+                    const currentMidpoint = getMidpoint(e.touches[0], e.touches[1]);
+                    const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                    translateX = currentMidpoint.x - rect.left - (initialPinchMidX * newScale * initialScaleFactor);
+                    translateY = currentMidpoint.y - rect.top - (initialPinchMidY * newScale * initialScaleFactor);
                     scale = newScale;
-                    clampPan();
-                    applyTransform();
+                    clampPan(); applyTransform();
                 }
             }, { passive: false });
 
-            canvas.addEventListener('touchend', (event) => {
-                isDragging = false;
-                initialPinchDistance = 0;
-                clampPan();
-                applyTransform();
-                
-                if (event.changedTouches.length === 1 && event.touches.length === 0) {
-                    const releasedTouch = event.changedTouches[0];
-                    const deltaX = releasedTouch.clientX - initialTouchX;
-                    const deltaY = releasedTouch.clientY - initialTouchY;
-                    const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-                    // 判断是拖动还是点击落子
+            canvas.addEventListener('touchend', (e) => {
+                isDragging = false; initialPinchDistance = 0;
+                clampPan(); applyTransform();
+                if (e.changedTouches.length === 1 && e.touches.length === 0) {
+                    const releasedTouch = e.changedTouches[0];
+                    const moveDistance = Math.sqrt(Math.pow(releasedTouch.clientX - initialTouchX, 2) + Math.pow(releasedTouch.clientY - initialTouchY, 2));
                     if (moveDistance < tapThreshold) {
-                        // Only allow move if not animating zoom
-                        if (!isAnimatingZoom) { 
-                            const rect = canvas.getBoundingClientRect();
-                            const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
-                            
-                            const clientX = releasedTouch.clientX;
-                            const clientY = releasedTouch.clientY;
-
-                            // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
-                            const logicalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
-                            const logicalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
-
-                            const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                            const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                            
-                            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                                handlePlayerMove(x, y);
-                            }
-                        } else {
-                            logMessage('正在进行窗口缩放动画，请稍候再落子。');
-                        }
+                        const rect = canvas.getBoundingClientRect();
+                        const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                        const logicalCanvasX = (releasedTouch.clientX - rect.left) / (scale * initialScaleFactor);
+                        const logicalCanvasY = (releasedTouch.clientY - rect.top) / (scale * initialScaleFactor);
+                        const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) handlePlayerMove(x, y);
                     }
                 }
-                resetIdleTimer(); // Reset idle timer after touch ends
-                isGestureActive = false; // Reset gesture active flag after interaction ends
+                resetIdleTimer(); isGestureActive = false;
             });
 
-            canvas.addEventListener('mousedown', (event) => {
-                if (!IS_MOBILE) { // Only for desktop
-                    isDragging = true; // Set dragging for desktop mouse
+            canvas.addEventListener('mousedown', (e) => {
+                if (!IS_MOBILE) {
+                    isDragging = true; isGestureActive = true;
+                    lastPanX = e.clientX; lastPanY = e.clientY;
+                    initialTouchX = e.clientX; initialTouchY = e.clientY;
+                }
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                if (!IS_MOBILE) {
+                    isDragging = false;
+                    const moveDistance = Math.sqrt(Math.pow(e.clientX - initialTouchX, 2) + Math.pow(e.clientY - initialTouchY, 2));
+                    if (moveDistance < tapThreshold) {
+                        const rect = canvas.getBoundingClientRect();
+                        const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
+                        const logicalCanvasX = (e.clientX - rect.left) / (scale * initialScaleFactor);
+                        const logicalCanvasY = (e.clientY - rect.top) / (scale * initialScaleFactor);
+                        const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
+                        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) handlePlayerMove(x, y);
+                    }
+                    isGestureActive = false;
+                }
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!IS_MOBILE && e.buttons === 1 && isDragging) {
+                    translateX += (e.clientX - lastPanX);
+                    translateY += (e.clientY - lastPanY);
+                    lastPanX = e.clientX; lastPanY = e.clientY;
+                    clampPan(); applyTransform();
                     isGestureActive = true;
-                    lastPanX = event.clientX;
-                    lastPanY = event.clientY;
-                    initialTouchX = event.clientX;
-                    initialTouchY = event.clientY;
                 }
             });
 
-            canvas.addEventListener('mouseup', (event) => {
-                if (!IS_MOBILE) { // Only for desktop
-                    isDragging = false; // Reset dragging for desktop mouse
-                    const deltaX = event.clientX - initialTouchX;
-                    const deltaY = event.clientY - initialTouchY;
-                    const moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            canvas.addEventListener('mouseout', () => { if (!IS_MOBILE) { isDragging = false; isGestureActive = false; } });
 
-                    // 判断是拖动还是点击落子
-                    if (moveDistance < tapThreshold) {
-                        // Only allow move if not animating zoom
-                        if (!isAnimatingZoom) {
-                            const rect = canvas.getBoundingClientRect();
-                            const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
-                            
-                            const clientX = event.clientX;
-                            const clientY = event.clientY;
-
-                            // Use LOGICAL_CANVAS_WIDTH/HEIGHT for coordinate translation
-                            const logicalCanvasX = (clientX - rect.left) / (scale * initialScaleFactor);
-                            const logicalCanvasY = (clientY - rect.top) / (scale * initialScaleFactor);
-
-                            const x = Math.round((logicalCanvasX - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                            const y = Math.round((logicalCanvasY - INTERNAL_DRAWING_BOARD_PADDING) / INTERNAL_DRAWING_CELL_SIZE);
-                            
-                            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-                                handlePlayerMove(x, y);
-                            }
-                        } else {
-                            logMessage('正在进行窗口缩放动画，请稍候再落子。');
-                        }
-                    }
-                    isGestureActive = false; // Reset gesture active flag after interaction ends
-                }
-            });
-
-            canvas.addEventListener('mousemove', (event) => {
-                if (!IS_MOBILE && event.buttons === 1 && isDragging) { // Only for desktop and if left mouse button is down and dragging is active
-                    const currentX = event.clientX;
-                    const currentY = event.clientY;
-
-                    translateX += (currentX - lastPanX);
-                    translateY += (currentY - lastPanY);
-
-                    lastPanX = currentX;
-                    lastPanY = currentY;
-
-                    clampPan();
-                    applyTransform();
-                    isGestureActive = true; // Keep gesture active during mouse drag
-                }
-            });
-
-            canvas.addEventListener('mouseout', () => {
-                if (!IS_MOBILE) { // Only for desktop
-                    isDragging = false; // Stop dragging if mouse leaves canvas
-                    isGestureActive = false; // Reset gesture active flag if mouse leaves
-                }
-            });
-
-            // Re-adjust board on window resize
             let resizeTimeout;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     calculateResponsiveDisplaySize();
-                    // --- OPTIMIZATION: Redraw static board on resize ---
-                    drawStaticBoard();
-                    updatePiecesCanvas();
-                    // --- END OPTIMIZATION ---
-                    drawBoard();
-                    resetIdleTimer(); // Reset idle timer on resize
+                    drawStaticBoard(); updatePiecesCanvas(); drawBoard();
+                    resetIdleTimer();
                 }, 150);
             });
             
-            // New game button event
-            newGameBtn.addEventListener('click', () => {
-                startNewGame();
-            });
+            newGameBtn.addEventListener('click', startNewGame);
             
-            // Undo button event
             undoBtn.addEventListener('click', () => {
-                if (gameOver) {
-                    logMessage('游戏已结束，无法悔棋。');
+                if (gameOver || isAiThinking) {
+                    logMessage(isAiThinking ? 'AI正在思考，无法悔棋。' : '游戏已结束，无法悔棋。');
                     return;
                 }
-
-                if (gameMode === 1 && undoChances <= 0) {
-                    logMessage('悔棋机会不足，请尝试兑换。');
-                    return;
-                }
-                // Undo is not allowed in AI vs AI mode
-                if (gameMode === 3) {
-                    logMessage('AI vs AI 模式下无法悔棋。');
-                    return;
-                }
-
-                if (moveHistory.length === 0) {
-                    logMessage('棋盘上没有可悔的棋子。');
-                    return;
-                }
+                if (gameMode === 1 && undoChances <= 0) { logMessage('悔棋机会不足，请尝试兑换。'); return; }
+                if (gameMode === 3) { logMessage('AI vs AI 模式下无法悔棋。'); return; }
+                if (moveHistory.length === 0) { logMessage('棋盘上没有可悔的棋子。'); return; }
                 
-                // In Player vs AI mode, undo 2 moves (player's and AI's)
-                // In Player vs Player mode, undo 1 move
                 const undoCount = gameMode === 1 ? Math.min(2, moveHistory.length) : 1;
-                
-                if (gameMode === 1) {
-                    undoChances--;
-                }
+                if (gameMode === 1) undoChances--;
                 
                 for (let i = 0; i < undoCount; i++) {
                     if (moveHistory.length > 0) {
                         const lastMove = moveHistory.pop();
                         gameBoard[lastMove.x][lastMove.y] = 0;
-                        // Set current player back to the player who made the move that was just undone
                         currentPlayer = lastMove.player; 
                     }
                 }
                 
                 lastMovePosition = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
-                gameOver = false; // Crucial: Reset gameOver state to allow further moves
+                gameOver = false;
                 
-                // --- OPTIMIZATION: Update pieces canvas and redraw ---
-                updatePiecesCanvas();
-                drawBoard();
-                // --- END OPTIMIZATION ---
-
-                updateGameStatus();
-                updateUndoChancesDisplay();
+                updatePiecesCanvas(); drawBoard();
+                updateGameStatus(); updateUndoChancesDisplay();
                 logMessage(`悔棋 ${undoCount} 步`);
-
-                // Adjust zoom after undo, focusing on the new last move or overall board
-                updateDynamicZoom(); 
-
-                // If in Player vs AI mode and it's AI's turn after undo, make AI move
-                if (gameMode === 1) {
-                    const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
-                                     !playerStartsWithBlack && currentPlayer === 1;
-                    if (isAiTurn && !gameOver) { // Ensure game is not over before AI moves
-                        aiMove();
-                    }
-                }
-                resetIdleTimer(); // Reset idle timer after undo
+                updateDynamicZoom(); resetIdleTimer();
             });
             
-            // Difficulty toggle button event
             difficultyToggle.addEventListener('click', () => {
                 difficulty = (difficulty % 3) + 1;
                 const difficultyLevels = ['简单', '中等', '困难'];
                 const winRates = ['较低', '中等', '较高']; 
                 difficultyText.textContent = `${difficultyLevels[difficulty - 1]}(胜率${winRates[difficulty - 1]})`;
                 logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]} (开元胜率${winRates[difficulty - 1]})`);
-                resetIdleTimer(); // Reset idle timer after difficulty change
+                resetIdleTimer();
             });
             
-            // Mode toggle button event
             modeToggle.addEventListener('click', () => {
-                gameMode = (gameMode % 3) + 1; // Cycles 1 -> 2 -> 3 -> 1
-                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家', '开元 vs Kaiyuan']; // Added new mode
+                gameMode = (gameMode % 3) + 1;
+                const modeNames = ['玩家 vs 开元', '玩家 vs 玩家', '开元 vs Kaiyuan'];
                 modeText.textContent = modeNames[gameMode - 1];
-                playerStartsWithBlack = true; // Reset for new game mode
-                gameCount = 1;
+                playerStartsWithBlack = true; gameCount = 1;
                 logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
-                initGame(); // Re-initialize game to apply new mode settings
+                initGame();
             });
             
-            // Close modal button event
             closeModalBtn.addEventListener('click', () => {
                 winnerModal.style.display = 'none';
                 startNewGame();
             });
             
-            // Close modal when clicking outside
             window.addEventListener('click', (event) => {
                 if (event.target === winnerModal) {
                     winnerModal.style.display = 'none';
@@ -2218,18 +1656,19 @@
                 }
             });
 
-            // Redeem code input event listeners
-            redeemCodeInput.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    handleRedeemCode();
-                }
-            });
-
+            redeemCodeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRedeemCode(); });
             redeemCodeInput.addEventListener('input', () => {
                 const value = redeemCodeInput.value.trim();
-                // Check for 7 alphanumeric characters (including Chinese characters)
-                if (value.length === 7 && /^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(value)) {
-                    handleRedeemCode();
+                if (value.length === 7 && /^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(value)) handleRedeemCode();
+            });
+            
+            musicToggle.addEventListener('click', () => {
+                if (music.paused) {
+                    music.play().catch(() => logMessage('音乐播放失败'));
+                    musicText.textContent = '播放';
+                } else {
+                    music.pause();
+                    musicText.textContent = '暂停';
                 }
             });
         });
