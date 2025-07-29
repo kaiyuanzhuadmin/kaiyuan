@@ -638,19 +638,19 @@
             // AI difficulty configuration
             const difficultyConfig = {
                 1: { // Easy 简单
-                    searchDepth: 4, // Search depth: AI looks 3 steps ahead
-                    randomMoveChance: 0.0, // Chance of random move: 10% chance of random move, reducing difficulty
-                    thinkTimeRange: [400, 1500] // Thinking time range (milliseconds)
+                    searchDepth: 4, 
+                    randomMoveChance: 0.0, 
+                    thinkTimeRange: [400, 1500] 
                 },
                 2: { // Medium 中等
-                    searchDepth: 4, // Search depth: AI looks 4 steps ahead (adjusted for performance)
-                    randomMoveChance: 0.0, // Chance of random move: 0% chance of random move
-                    thinkTimeRange: [800, 3500] // Adjusted thinking time range
+                    searchDepth: 4, 
+                    randomMoveChance: 0.0, 
+                    thinkTimeRange: [800, 3500] 
                 },
                 3: { // Hard 困难
-                    searchDepth: 4, // Search depth: AI looks 5 steps ahead (adjusted for performance)
-                    randomMoveChance: 0.0, // Chance of random move: 0%, always chooses the best strategy
-                    thinkTimeRange: [1000, 5500] // Adjusted thinking time range
+                    searchDepth: 4, 
+                    randomMoveChance: 0.0, 
+                    thinkTimeRange: [1000, 5500] 
                 }
             };
 
@@ -671,66 +671,42 @@
             piecesCtx.scale(devicePixelRatio, devicePixelRatio);
             // --- END OPTIMIZATION ---
 
-            // Function to evaluate pattern score (more detailed patterns)
+            // --- OPTIMIZATION: evaluatePattern function with reduced scores ---
             function evaluatePattern(pattern) {
                 // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
-                // Reduce the scores of all chess patterns to reduce computational burden and avoid blank screens.
+                // Further reduced scores to prevent computational strain and white screen flashes.
                 
-                // Five in a row (winning condition)
-                if (pattern.includes('PPPPP')) return 100000; // Reduced score
+                // Winning/Very High Priority
+                if (pattern.includes('PPPPP')) return 50000; // Win
 
-                // Live Four: _PPPP_ (can be extended to five in two ways)
-                if (pattern.includes('_PPPP_')) return 10000; // Reduced score
-                // Broken Live Four (e.g., _P_PPP_, _PP_PP_, _PPP_P_)
-                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 7000; // Reduced score
-                
-                // Blocked Four (one end blocked, can still win)
-                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1200; // Reduced score
-                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 1800; // Broken Four (can still win) (Reduced score)
+                // High Priority Threats (Live Fours)
+                if (pattern.includes('_PPPP_')) return 10000; // Live Four
+                if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 4000; // Broken Live Four
 
-                // Live Three: _PPP_ (can become live four)
-                if (pattern.includes('_PPP_')) return 690; // Reduced score
-                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660; // Broken Live Three (Reduced score)
+                // Medium Priority Threats (Blocked Fours, Live Threes)
+                if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 500; // Blocked Four
+                if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 400; // Broken Blocked Four
+                if (pattern.includes('_PPP_')) return 200; // Live Three
+                if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 180; // Broken Live Three
 
-                // Blocked Three (can become blocked four)
-                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100; // Reduced score
-                if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 150; // (Reduced score)
+                // Low Priority
+                if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 50; // Blocked Three
+                if (pattern.includes('__PP__')) return 20; // Live Two
+                if (pattern.includes('__P_P__')) return 15;
+                if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 5; // Blocked Two
+                if (pattern.includes('_P_')) return 2; // Live One
 
-                // Live Two: __PP__ (can become live three)
-                if (pattern.includes('__PP__')) return 100; // Reduced score
-                if (pattern.includes('__P_P__')) return 82; // (Reduced score)
-
-                // Blocked Two
-                if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8; // (Reduced score)
-                
-                // Live One
-                if (pattern.includes('_P_')) return 10; // Live One
-                
                 // Defensive evaluation (opponent's patterns)
-                // Replace P with O to evaluate opponent's threats
                 const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
                 
-                // Opponent's Five in a row
-                if (opponentPattern.includes('PPPPP')) return -900000;
+                if (opponentPattern.includes('PPPPP')) return -80000; // Block opponent's win is top priority
+                if (opponentPattern.includes('_PPPP_')) return -15000; // Block opponent's Live Four
+                if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -4000; // Block opponent's Blocked Four
+                if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -3000;
+                if (opponentPattern.includes('_PPP_')) return -1800; // Block opponent's Live Three
+                if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -1600;
                 
-                // Opponent's Live Four
-                if (opponentPattern.includes('_PPPP_')) return -40000;
-                
-                // Opponent's Blocked Four
-                if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -10000;
-                if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -10000;
-                
-                // Opponent's Live Three
-                if (opponentPattern.includes('_PPP_')) return -4500;
-                if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -4090;
-                
-                // Opponent's Sleep Three
-                if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -2600;
-                
-                // Opponent's Live Two
-                if (opponentPattern.includes('_PP_')) return -200;
-                
-                return 1; // Insignificant pattern
+                return 0; // No significant pattern
             }
 
             // Professional Gomoku position evaluation function
@@ -1227,7 +1203,6 @@
                     let move;
                     
                     // New logic for AI's first move to ensure flexibility
-                    // If it's the AI's first move (player has made 1 move)
                     if (moveHistory.length === 1) { 
                         const playerFirstMove = moveHistory[0];
                         const candidateOpeningMoves = [];
@@ -1237,7 +1212,6 @@
                         for (let i = Math.max(0, playerFirstMove.x - radius); i <= Math.min(BOARD_SIZE - 1, playerFirstMove.x + radius); i++) {
                             for (let j = Math.max(0, playerFirstMove.y - radius); j <= Math.min(BOARD_SIZE - 1, playerFirstMove.y + radius); j++) {
                                 if (gameBoard[i][j] === 0) { // If the cell is empty
-                                    // Exclude the exact player's first move spot
                                     if (!(i === playerFirstMove.x && j === playerFirstMove.y)) {
                                         candidateOpeningMoves.push({ x: i, y: j });
                                     }
@@ -1245,20 +1219,16 @@
                             }
                         }
 
-                        // Filter out moves that are too far from the board's center
-                        // This prevents the AI from making overly eccentric first moves.
                         const center = Math.floor(BOARD_SIZE / 2);
-                        const maxDistanceFromCenter = 5; // Keep moves within a reasonable distance from board center
+                        const maxDistanceFromCenter = 5; 
                         const filteredCandidates = candidateOpeningMoves.filter(m => {
                             const distFromCenter = Math.max(Math.abs(m.x - center), Math.abs(m.y - center));
                             return distFromCenter <= maxDistanceFromCenter; 
                         });
 
                         if (filteredCandidates.length > 0) {
-                            // Randomly pick one of the filtered candidates for flexibility
                             move = filteredCandidates[Math.floor(Math.random() * filteredCandidates.length)];
                         } else {
-                            // Fallback to getBestMove if no suitable opening candidates found (should be rare)
                             move = getBestMove(); 
                         }
                     } else if (Math.random() < config.randomMoveChance) {
@@ -1314,7 +1284,6 @@
 
                             // If in AI vs AI mode, immediately trigger the next AI move after a delay
                             if (gameMode === 3 && !gameOver) {
-                                // Only schedule the next AI move if the game is still ongoing
                                 setTimeout(() => aiMove(), 1000); // Delay for observation
                             }
                             isAiThinking = false; // Clear flag after AI move is complete
@@ -1334,12 +1303,10 @@
                 if (gameMode === 2) {
                     return player === 1 ? '玩家1' : '玩家2';
                 } else if (gameMode === 3) { // New AI vs AI mode
-                    // Ensure aiPlayerRoles is defined and has the player key
                     if (aiPlayerRoles && aiPlayerRoles[player]) {
                         const role = aiPlayerRoles[player];
                         return `${role.name} (${role.color})`;
                     } else {
-                        // Fallback for unexpected state, though initGame should prevent this
                         return `AI Player ${player}`;
                     }
                 } else { // Player vs AI mode
@@ -1351,7 +1318,7 @@
                 }
             }
             
-            // Get best move - using Minimax with Alpha-Beta Pruning
+            // --- OPTIMIZATION: Get best move with dynamic search depth ---
             function getBestMove() {
                 const config = difficultyConfig[difficulty];
                 
@@ -1362,23 +1329,32 @@
                 const opponent = currentPlayer === 1 ? 2 : 1;
                 const blockMove = findWinningMove(opponent);
                 if (blockMove) return blockMove;
+
+                // --- OPTIMIZATION: Dynamic Search Depth ---
+                let currentDepth = config.searchDepth;
+                const pieceCount = moveHistory.length;
+                // Reduce search depth as the game progresses to maintain performance
+                if (pieceCount > 25) {
+                    currentDepth = Math.max(2, config.searchDepth - 2);
+                } else if (pieceCount > 15) {
+                    currentDepth = Math.max(2, config.searchDepth - 1);
+                }
+                // --- END OPTIMIZATION ---
                 
                 // Use Minimax algorithm to search for the best move
-                // The `minimax` function returns an object { score, move }
-                const result = minimax(config.searchDepth, -Infinity, Infinity, true, currentPlayer);
+                const result = minimax(currentDepth, -Infinity, Infinity, true, currentPlayer);
                 
                 if (result.move) {
                     return result.move;
                 }
                 
-                // Fallback to a random good move if minimax fails (shouldn't happen often)
+                // Fallback to a random good move if minimax fails
                 return getRandomGoodMove();
             }
             
-            // Minimax algorithm implementation
+            // --- OPTIMIZATION: Minimax algorithm with faster win/slower loss preference ---
             function minimax(depth, alpha, beta, isMaximizingPlayer, player) {
                 if (depth === 0 || gameOver) {
-                    // Base case: return board evaluation
                     return {
                         score: evaluateBoard(player),
                         move: null
@@ -1386,7 +1362,7 @@
                 }
                 
                 const moves = getOrderedMoves();
-                if (moves.length === 0) return { score: 0, move: null }; // No valid moves
+                if (moves.length === 0) return { score: 0, move: null };
                 
                 let bestMove = null;
                 
@@ -1394,17 +1370,16 @@
                     let maxScore = -Infinity;
                     
                     for (const move of moves) {
-                        gameBoard[move.x][move.y] = player; // Make the move
+                        gameBoard[move.x][move.y] = player;
                         
-                        // Check for immediate win after making the move
                         if (checkWin(move.x, move.y, player)) {
-                            gameBoard[move.x][move.y] = 0; // Undo the move
-                            // 降低即时胜利的分值，以避免过大的数值导致计算问题
-                            return { score: 100000, move }; 
+                            gameBoard[move.x][move.y] = 0;
+                            // A win found at a higher depth (sooner) is better.
+                            return { score: 50000 + depth, move }; 
                         }
                         
                         const result = minimax(depth - 1, alpha, beta, false, player === 1 ? 2 : 1);
-                        gameBoard[move.x][move.y] = 0; // Undo the move
+                        gameBoard[move.x][move.y] = 0; // Undo move
                         
                         if (result.score > maxScore) {
                             maxScore = result.score;
@@ -1412,25 +1387,24 @@
                         }
                         
                         alpha = Math.max(alpha, result.score);
-                        if (beta <= alpha) break; // Alpha-Beta Pruning
+                        if (beta <= alpha) break; // Pruning
                     }
                     
                     return { score: maxScore, move: bestMove };
-                } else { // Minimizing player (opponent)
+                } else { // Minimizing player
                     let minScore = Infinity;
                     
                     for (const move of moves) {
-                        gameBoard[move.x][move.y] = player; // Make the move
+                        gameBoard[move.x][move.y] = player;
                         
-                        // Check for immediate win for opponent after making the move
                         if (checkWin(move.x, move.y, player)) {
-                            gameBoard[move.x][move.y] = 0; // Undo the move
-                            // 降低即时失败的分值，以避免过大的数值导致计算问题
-                            return { score: -100000, move }; 
+                            gameBoard[move.x][move.y] = 0;
+                            // A loss found at a higher depth (sooner) is worse.
+                            return { score: -50000 - depth, move }; 
                         }
                         
                         const result = minimax(depth - 1, alpha, beta, true, player === 1 ? 2 : 1);
-                        gameBoard[move.x][move.y] = 0; // Undo the move
+                        gameBoard[move.x][move.y] = 0; // Undo move
                         
                         if (result.score < minScore) {
                             minScore = result.score;
@@ -1438,22 +1412,20 @@
                         }
                         
                         beta = Math.min(beta, result.score);
-                        if (beta <= alpha) break; // Alpha-Beta Pruning
+                        if (beta <= alpha) break; // Pruning
                     }
                     
                     return { score: minScore, move: bestMove };
                 }
             }
             
-            // Get ordered candidate moves (heuristic sorting)
+            // --- OPTIMIZATION: Get ordered candidate moves with reduced count and adjusted weights ---
             function getOrderedMoves() {
                 const moves = [];
-                
-                // Iterate over a slightly larger area around existing pieces for efficiency
-                // This helps focus the search on relevant areas
-                let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
                 let hasPieces = false;
 
+                // Define search area around existing pieces
+                let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (gameBoard[i][j] !== 0) {
@@ -1467,12 +1439,11 @@
                 }
 
                 if (!hasPieces) {
-                    // If board is empty, suggest center move
-                    moves.push({ x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2), score: 0 });
+                    moves.push({ x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2), score: 1 });
                     return moves;
                 }
 
-                // Expand search area slightly
+                // Expand search area by 2 cells
                 const searchMinX = Math.max(0, minX - 2);
                 const searchMaxX = Math.min(BOARD_SIZE - 1, maxX + 2);
                 const searchMinY = Math.max(0, minY - 2);
@@ -1481,22 +1452,20 @@
                 for (let i = searchMinX; i <= searchMaxX; i++) {
                     for (let j = searchMinY; j <= searchMaxY; j++) {
                         if (gameBoard[i][j] === 0) {
-                            // Evaluate position for both current player and opponent to find critical spots
                             const scoreForPlayer = evaluatePosition(i, j, currentPlayer);
                             const scoreForOpponent = evaluatePosition(i, j, currentPlayer === 1 ? 2 : 1);
                             
-                            // Combine scores, prioritizing moves that create threats for self
-                            // AND moves that block opponent's threats.
-                            // 降低对手分值的乘数，以减少总分值，避免白屏
-                            const combinedScore = scoreForPlayer + scoreForOpponent * 3.0; 
-                            moves.push({ x: i, y: j, score: combinedScore });
+                            // Give slightly more weight to blocking opponent's threats.
+                            const combinedScore = scoreForPlayer + scoreForOpponent * 1.5; 
+                            if (combinedScore > 0) {
+                                moves.push({ x: i, y: j, score: combinedScore });
+                            }
                         }
                     }
                 }
                 
-                // Sort by score in descending order, prioritize higher-scoring moves
-                // Limit the number of candidate moves to keep thinking time short
-                return moves.sort((a, b) => b.score - a.score).slice(0, 40); // Reduced candidate quantity for better performance
+                // Sort by score and limit to the top 30 moves to improve performance.
+                return moves.sort((a, b) => b.score - a.score).slice(0, 30);
             }
             
             // Check if position has adjacent pieces (within a 2-unit radius)
@@ -1539,8 +1508,8 @@
                         if (gameBoard[i][j] === player) {
                             totalScore += evaluatePosition(i, j, player);
                         } else if (gameBoard[i][j] === opponent) {
-                            // Opponent's threats are much more critical to defend against (降低对手威胁的乘数)
-                            totalScore -= evaluatePosition(i, j, opponent) * 3.0; 
+                            // --- OPTIMIZATION: Adjusted opponent weight to be consistent ---
+                            totalScore -= evaluatePosition(i, j, opponent) * 1.5; 
                         }
                     }
                 }
