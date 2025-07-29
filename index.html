@@ -617,7 +617,6 @@
             const difficultyToggle = document.getElementById('difficulty-toggle');
             const difficultyText = document.getElementById('difficulty-text');
             const gameLog = document.getElementById('game-log');
-            // const thinkingIndicator = document.getElementById('thinking'); // Commented out as per user request
             const modeToggle = document.getElementById('mode-toggle');
             const modeText = document.getElementById('mode-text');
             const winnerModal = document.getElementById('winner-modal');
@@ -628,6 +627,13 @@
             const musicToggle = document.getElementById('music-toggle');
             const musicText = document.getElementById('music-text');
             const redeemCodeInput = document.getElementById('redeem-code-input');
+
+            // --- OPTIMIZATION: Off-screen canvases ---
+            const backgroundCanvas = document.createElement('canvas');
+            const backgroundCtx = backgroundCanvas.getContext('2d');
+            const piecesCanvas = document.createElement('canvas');
+            const piecesCtx = piecesCanvas.getContext('2d');
+            // --- END OPTIMIZATION ---
 
             // AI difficulty configuration
             const difficultyConfig = {
@@ -651,8 +657,19 @@
             // Set Canvas internal drawing size once, scaled by devicePixelRatio for ultra-clear display
             canvas.width = LOGICAL_CANVAS_WIDTH * devicePixelRatio;
             canvas.height = LOGICAL_CANVAS_HEIGHT * devicePixelRatio;
+            // --- OPTIMIZATION: Set off-screen canvas sizes ---
+            backgroundCanvas.width = canvas.width;
+            backgroundCanvas.height = canvas.height;
+            piecesCanvas.width = canvas.width;
+            piecesCanvas.height = canvas.height;
+            // --- END OPTIMIZATION ---
+
             // Scale the drawing context to match the logical drawing units
             ctx.scale(devicePixelRatio, devicePixelRatio);
+            // --- OPTIMIZATION: Scale off-screen canvas contexts ---
+            backgroundCtx.scale(devicePixelRatio, devicePixelRatio);
+            piecesCtx.scale(devicePixelRatio, devicePixelRatio);
+            // --- END OPTIMIZATION ---
 
             // Function to evaluate pattern score (more detailed patterns)
             function evaluatePattern(pattern) {
@@ -813,6 +830,11 @@
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
                 
+                // --- OPTIMIZATION: Draw static elements once ---
+                drawStaticBoard();
+                updatePiecesCanvas();
+                // --- END OPTIMIZATION ---
+
                 if (gameMode === 3) { // AI vs AI mode
                     if (gameCount % 2 !== 0) { // Odd game count: 开元 (黑) vs Kaiyuan AI (白)
                         aiPlayerRoles = {
@@ -877,37 +899,37 @@
                 drawBoard();
                 resetIdleTimer(); // Start idle timer
             }
-            
-            // Draw board
-            function drawBoard() {
-                // Clear the canvas at its full internal resolution
-                ctx.clearRect(0, 0, canvas.width / devicePixelRatio, canvas.height / devicePixelRatio);
-                
+
+            // --- OPTIMIZATION: New function to draw static board elements to the background canvas ---
+            function drawStaticBoard() {
+                // Clear the background canvas
+                backgroundCtx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
+
                 // Draw board background with a subtle wood texture effect
-                const boardGradient = ctx.createLinearGradient(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
+                const boardGradient = backgroundCtx.createLinearGradient(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 boardGradient.addColorStop(0, '#DEB887'); // Light wood
                 boardGradient.addColorStop(1, '#C19A6B'); // Darker wood
-                ctx.fillStyle = boardGradient;
-                ctx.fillRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
-                
+                backgroundCtx.fillStyle = boardGradient;
+                backgroundCtx.fillRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
+
                 // Draw grid lines
-                ctx.strokeStyle = '#8B4513'; // Darker brown for lines
-                ctx.lineWidth = 1.5; // Slightly thicker lines for better visibility
-                
+                backgroundCtx.strokeStyle = '#8B4513'; // Darker brown for lines
+                backgroundCtx.lineWidth = 1.5; // Slightly thicker lines for better visibility
+
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     // Horizontal lines
-                    ctx.beginPath();
-                    ctx.moveTo(INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
-                    ctx.lineTo(LOGICAL_CANVAS_WIDTH - INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
-                    ctx.stroke();
+                    backgroundCtx.beginPath();
+                    backgroundCtx.moveTo(INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
+                    backgroundCtx.lineTo(LOGICAL_CANVAS_WIDTH - INTERNAL_DRAWING_BOARD_PADDING, INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE);
+                    backgroundCtx.stroke();
                     
                     // Vertical lines
-                    ctx.beginPath();
-                    ctx.moveTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, INTERNAL_DRAWING_BOARD_PADDING);
-                    ctx.lineTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, LOGICAL_CANVAS_HEIGHT - INTERNAL_DRAWING_BOARD_PADDING);
-                    ctx.stroke();
+                    backgroundCtx.beginPath();
+                    backgroundCtx.moveTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, INTERNAL_DRAWING_BOARD_PADDING);
+                    backgroundCtx.lineTo(INTERNAL_DRAWING_BOARD_PADDING + i * INTERNAL_DRAWING_CELL_SIZE, LOGICAL_CANVAS_HEIGHT - INTERNAL_DRAWING_BOARD_PADDING);
+                    backgroundCtx.stroke();
                 }
-                
+
                 // Draw star points
                 const starPoints = [
                     {x: 3, y: 3}, {x: 3, y: 11}, 
@@ -916,63 +938,81 @@
                 ];
                 
                 starPoints.forEach(point => {
-                    drawStarPoint(point.x, point.y);
+                    drawStarPoint(point.x, point.y, backgroundCtx);
                 });
+            }
+
+            // --- OPTIMIZATION: New function to update the pieces canvas ---
+            function updatePiecesCanvas() {
+                // Clear the pieces canvas
+                piecesCtx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 
-                // Draw all pieces
+                // Draw all pieces from the gameBoard state onto the pieces canvas
                 for (let i = 0; i < BOARD_SIZE; i++) {
                     for (let j = 0; j < BOARD_SIZE; j++) {
                         if (gameBoard[i][j] === 1) {
-                            drawPiece(i, j, 'black', 1); // Draw at full scale
+                            drawPiece(i, j, 'black', 1, piecesCtx);
                         } else if (gameBoard[i][j] === 2) {
-                            drawPiece(i, j, 'white', 1); // Draw at full scale
+                            drawPiece(i, j, 'white', 1, piecesCtx);
                         }
                     }
                 }
+            }
+            
+            // --- OPTIMIZATION & FIX: Modified drawBoard to be much faster and prevent offset ---
+            function drawBoard() {
+                // Clear the main canvas using logical coordinates
+                ctx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 
-                // Draw marker for the last move
+                // --- FIX: Use the explicit drawImage signature to prevent scaling/offset issues ---
+                // Draw the pre-rendered background and pieces canvases, specifying the destination size in logical pixels.
+                ctx.drawImage(backgroundCanvas, 0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
+                ctx.drawImage(piecesCanvas, 0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
+                // --- END FIX ---
+                
+                // Draw marker for the last move on top
                 if (lastMovePosition) {
                     drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
                 }
             }
             
             // Draw star point with improved aesthetics
-            function drawStarPoint(x, y) {
+            function drawStarPoint(x, y, targetCtx) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const radius = 4;
                 
                 // Draw a subtle shadow
-                ctx.beginPath();
-                ctx.arc(centerX + 1, centerY + 1, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.fill();
+                targetCtx.beginPath();
+                targetCtx.arc(centerX + 1, centerY + 1, radius, 0, 2 * Math.PI);
+                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                targetCtx.fill();
 
                 // Draw the star point itself
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#8B4513'; // Darker brown
-                ctx.fill();
+                targetCtx.beginPath();
+                targetCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                targetCtx.fillStyle = '#8B4513'; // Darker brown
+                targetCtx.fill();
             }
             
             // Draw piece with enhanced aesthetics and optional scale for animation
-            function drawPiece(x, y, color, pieceScale = 1) {
+            function drawPiece(x, y, color, pieceScale = 1, targetCtx = ctx) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const currentPieceSize = INTERNAL_DRAWING_PIECE_SIZE * pieceScale;
 
                 // Draw subtle shadow for depth
-                ctx.beginPath();
-                ctx.arc(centerX + 2 * pieceScale, centerY + 2 * pieceScale, currentPieceSize / 2, 0, 2 * Math.PI);
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Slightly darker shadow
-                ctx.fill();
+                targetCtx.beginPath();
+                targetCtx.arc(centerX + 2 * pieceScale, centerY + 2 * pieceScale, currentPieceSize / 2, 0, 2 * Math.PI);
+                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Slightly darker shadow
+                targetCtx.fill();
                 
                 // Draw piece with radial gradient for glossy effect
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, currentPieceSize / 2, 0, 2 * Math.PI);
+                targetCtx.beginPath();
+                targetCtx.arc(centerX, centerY, currentPieceSize / 2, 0, 2 * Math.PI);
                 
                 // Create radial gradient for a more polished look
-                const gradient = ctx.createRadialGradient(
+                const gradient = targetCtx.createRadialGradient(
                     centerX - currentPieceSize / 4, centerY - currentPieceSize / 4, currentPieceSize / 10, // Highlight source
                     centerX, centerY, currentPieceSize / 2 // End of gradient
                 );
@@ -981,22 +1021,22 @@
                     gradient.addColorStop(0, '#FFFFFF'); // Bright white highlight
                     gradient.addColorStop(0.7, '#F0F0F0'); // Light grey
                     gradient.addColorStop(1, '#E0E0E0'); // Darker grey for edge
-                    ctx.strokeStyle = '#D9D9D9';
+                    targetCtx.strokeStyle = '#D9D9D9';
                 } else {
                     gradient.addColorStop(0, '#404040'); // Dark grey highlight
                     gradient.addColorStop(0.7, '#1A1A1A'); // Darker grey
                     gradient.addColorStop(1, '#000000'); // Pure black for edge
-                    ctx.strokeStyle = '#333333';
+                    targetCtx.strokeStyle = '#333333';
                 }
                 
-                ctx.fillStyle = gradient;
-                ctx.fill();
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                targetCtx.fillStyle = gradient;
+                targetCtx.fill();
+                targetCtx.lineWidth = 1;
+                targetCtx.stroke();
             }
 
             // Animate piece placement
-            function animatePiecePlacement(x, y, playerColor) {
+            function animatePiecePlacement(x, y, playerColor, callback) {
                 let animationStartTime = null;
                 const animationDuration = 200; // milliseconds
 
@@ -1008,18 +1048,20 @@
                     const progress = Math.min(elapsedTime / animationDuration, 1); // Progress from 0 to 1
 
                     // Calculate scale: starts small, grows to full size
-                    const pieceAnimationScale = 0.5 + (0.5 * progress); // From 0.5 to 1.0
+                    const pieceAnimationScale = 0.5 + (0.5 * progress);
 
-                    // Redraw the entire board to clear previous state and draw all pieces
+                    // Redraw the board from off-screen canvases
                     drawBoard();
-                    // Then draw the animating piece with its current scale
-                    drawPiece(x, y, playerColor, pieceAnimationScale);
+                    // Then draw the animating piece directly on the main canvas
+                    drawPiece(x, y, playerColor, pieceAnimationScale, ctx);
 
                     if (progress < 1) {
                         requestAnimationFrame(animate);
                     } else {
-                        // Animation finished, ensure the final state is drawn correctly
+                        // Animation finished, update the pieces canvas and draw final state
+                        updatePiecesCanvas();
                         drawBoard();
+                        if (callback) callback(); // Execute callback after animation
                     }
                 }
                 requestAnimationFrame(animate);
@@ -1119,50 +1161,49 @@
                 moveHistory.push({x, y, player: currentPlayer});
                 lastMovePosition = {x, y};
                 
-                // Animate piece placement
-                animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white');
-
                 const playerName = getPlayerName(currentPlayer);
                 const pieceColor = currentPlayer === 1 ? '黑' : '白';
                 logMessage(`${playerName}在(${x+1},${y+1})落${pieceColor}子`);
                 
-                // Dynamic zoom for mobile, and now also for desktop after a move for better focus
-                // The transition property on #board handles the 0.5s animation
-                updateDynamicZoom(); 
+                // Animate piece placement and then continue game logic in the callback
+                animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white', () => {
+                    // This code runs AFTER the animation is complete
+                    updateDynamicZoom(); 
 
-                // Check if player wins
-                if (checkWin(x, y, currentPlayer)) {
-                    gameOver = true;
-                    const winnerMessage = `${playerName}获胜！`;
-                    updateGameStatus(winnerMessage);
-                    logMessage(`恭喜，${winnerMessage}`);
-                    showWinnerModal(winnerMessage);
-                    return;
-                }
-                
-                // Check if board is full
-                if (isBoardFull()) {
-                    gameOver = true;
-                    updateGameStatus('平局！');
-                    logMessage('游戏结束，平局！');
-                    showWinnerModal('平局！');
-                    return;
-                }
-                
-                // Switch player
-                currentPlayer = currentPlayer === 1 ? 2 : 1;
-                updateGameStatus();
-                
-                // If AI vs Player and it's AI's turn
-                if (gameMode === 1) {
-                    const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
-                                   (!playerStartsWithBlack && currentPlayer === 1);
-                    
-                    if (isAiTurn) {
-                        aiMove();
+                    // Check if player wins
+                    if (checkWin(x, y, currentPlayer)) {
+                        gameOver = true;
+                        const winnerMessage = `${playerName}获胜！`;
+                        updateGameStatus(winnerMessage);
+                        logMessage(`恭喜，${winnerMessage}`);
+                        showWinnerModal(winnerMessage);
+                        return;
                     }
-                }
-                resetIdleTimer(); // Reset idle timer after a move
+                    
+                    // Check if board is full
+                    if (isBoardFull()) {
+                        gameOver = true;
+                        updateGameStatus('平局！');
+                        logMessage('游戏结束，平局！');
+                        showWinnerModal('平局！');
+                        return;
+                    }
+                    
+                    // Switch player
+                    currentPlayer = currentPlayer === 1 ? 2 : 1;
+                    updateGameStatus();
+                    
+                    // If AI vs Player and it's AI's turn
+                    if (gameMode === 1) {
+                        const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || 
+                                       (!playerStartsWithBlack && currentPlayer === 1);
+                        
+                        if (isAiTurn) {
+                            aiMove();
+                        }
+                    }
+                    resetIdleTimer(); // Reset idle timer after a move
+                });
             }
             
             // AI move
@@ -1174,8 +1215,6 @@
                 
                 // Determine which AI is playing this turn
                 const currentAiPlayer = currentPlayer;
-
-                // thinkingIndicator.style.display = 'flex'; // Removed as per user request
                 
                 const config = difficultyConfig[difficulty];
                 const thinkTime = config.thinkTimeRange[0] + 
@@ -1227,8 +1266,6 @@
                     } else {
                         move = getBestMove(); // Use Minimax for subsequent moves
                     }
-
-                    // thinkingIndicator.style.display = 'none'; // Removed as per user request
                     
                     if (move && !gameOver) {
                         const {x, y} = move;
@@ -1238,9 +1275,6 @@
                         moveHistory.push({x, y, player: currentAiPlayer});
                         lastMovePosition = {x, y};
                         
-                        // Animate piece placement
-                        animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white');
-
                         const aiName = getPlayerName(currentAiPlayer); // Get name based on currentAiPlayer
                         const pieceColor = currentAiPlayer === 1 ? '黑' : '白';
                         
@@ -1249,44 +1283,49 @@
                         const duration = (aiEndTime - aiStartTime) / 1000; // Convert to seconds
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子 (用时 ${duration.toFixed(2)} 秒)`);
 
-                        // Dynamic zoom for mobile, and now also for desktop after a move for better focus
-                        updateDynamicZoom(); 
-                        
-                        // Check if AI wins
-                        if (checkWin(x, y, currentAiPlayer)) {
-                            gameOver = true;
-                            const winnerMessage = `${aiName}获胜！`;
-                            updateGameStatus(winnerMessage);
-                            logMessage(`${winnerMessage}`);
-                            showWinnerModal(winnerMessage);
-                            isAiThinking = false; // Clear flag even on game over
-                            return;
-                        }
-                        
-                        // Check if board is full
-                        if (isBoardFull()) {
-                            gameOver = true;
-                            updateGameStatus('平局！');
-                            logMessage('游戏结束，平局！');
-                            showWinnerModal('平局！');
-                            isAiThinking = false; // Clear flag even on game over
-                            return;
-                        }
-                        
-                        // Switch to next player
-                        currentPlayer = currentAiPlayer === 1 ? 2 : 1;
-                        updateGameStatus();
+                        // Animate piece placement and continue game logic in callback
+                        animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white', () => {
+                            updateDynamicZoom(); 
+                            
+                            // Check if AI wins
+                            if (checkWin(x, y, currentAiPlayer)) {
+                                gameOver = true;
+                                const winnerMessage = `${aiName}获胜！`;
+                                updateGameStatus(winnerMessage);
+                                logMessage(`${winnerMessage}`);
+                                showWinnerModal(winnerMessage);
+                                isAiThinking = false; // Clear flag even on game over
+                                return;
+                            }
+                            
+                            // Check if board is full
+                            if (isBoardFull()) {
+                                gameOver = true;
+                                updateGameStatus('平局！');
+                                logMessage('游戏结束，平局！');
+                                showWinnerModal('平局！');
+                                isAiThinking = false; // Clear flag even on game over
+                                return;
+                            }
+                            
+                            // Switch to next player
+                            currentPlayer = currentAiPlayer === 1 ? 2 : 1;
+                            updateGameStatus();
 
-                        // If in AI vs AI mode, immediately trigger the next AI move after a delay
-                        if (gameMode === 3 && !gameOver) {
-                            // Only schedule the next AI move if the game is still ongoing
-                            setTimeout(() => aiMove(), 1000); // Delay for observation
+                            // If in AI vs AI mode, immediately trigger the next AI move after a delay
+                            if (gameMode === 3 && !gameOver) {
+                                // Only schedule the next AI move if the game is still ongoing
+                                setTimeout(() => aiMove(), 1000); // Delay for observation
+                            }
+                            isAiThinking = false; // Clear flag after AI move is complete
+                            resetIdleTimer(); // Reset idle timer after AI move
+                        });
+                    } else {
+                        if (!move && !gameOver) {
+                            console.warn("AI could not find a move, or game is already over.");
                         }
-                    } else if (!move && !gameOver) {
-                        console.warn("AI could not find a move, or game is already over.");
+                        isAiThinking = false; // Clear flag if no move is made
                     }
-                    isAiThinking = false; // Clear flag after AI move is complete
-                    resetIdleTimer(); // Reset idle timer after AI move
                 }, thinkTime);
             }
             
@@ -1872,7 +1911,6 @@
                 // The CSS transition duration is 0.5s, so slightly longer than that.
                 setTimeout(() => {
                     isAnimatingZoom = false;
-                    console.log('isAnimatingZoom reset by setTimeout'); // For debugging
                 }, 600); // 600ms, slightly longer than the 0.5s CSS transition
             }
 
@@ -2097,6 +2135,10 @@
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     calculateResponsiveDisplaySize();
+                    // --- OPTIMIZATION: Redraw static board on resize ---
+                    drawStaticBoard();
+                    updatePiecesCanvas();
+                    // --- END OPTIMIZATION ---
                     drawBoard();
                     resetIdleTimer(); // Reset idle timer on resize
                 }, 150);
@@ -2148,7 +2190,12 @@
                 
                 lastMovePosition = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
                 gameOver = false; // Crucial: Reset gameOver state to allow further moves
+                
+                // --- OPTIMIZATION: Update pieces canvas and redraw ---
+                updatePiecesCanvas();
                 drawBoard();
+                // --- END OPTIMIZATION ---
+
                 updateGameStatus();
                 updateUndoChancesDisplay();
                 logMessage(`悔棋 ${undoCount} 步`);
