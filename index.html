@@ -991,6 +991,7 @@
             let isAiThinking = false; // Is AI thinking?
             let isAnimatingZoom = false; // Is the board animating zoom?
             let aiPlayerRoles = {}; // AI player role names
+            let aiMoveTimeoutId = null; // Stores the setTimeout ID for AI moves
 
             // Auto-zoom/pan related variables
             // 自动缩放/平移相关变量
@@ -1155,6 +1156,13 @@
             // Initialize game
             // 初始化游戏
             function initGame() {
+                // Clear any pending AI moves from previous game states or mode changes
+                // 清除任何之前游戏状态或模式切换中待处理的AI落子任务
+                if (aiMoveTimeoutId) {
+                    clearTimeout(aiMoveTimeoutId);
+                    aiMoveTimeoutId = null;
+                }
+
                 // Terminate existing worker if it exists, and create a new one
                 // 终止现有 worker，如果存在，并创建一个新的
                 if (aiWorker) {
@@ -1191,7 +1199,7 @@
                     updateGameStatus();
                     // Add a short delay for the first AI vs AI move to ensure UI is ready
                     // 为 AI vs AI 的第一步添加短暂延迟，确保 UI 准备就绪
-                    setTimeout(() => aiMove(), 1000); 
+                    aiMoveTimeoutId = setTimeout(() => aiMove(currentPlayer), 1000); 
                 } else if (IS_MOBILE) { // Initial zoom for mobile
                     // 移动端初始缩放
                     const optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS });
@@ -1212,7 +1220,7 @@
                         logMessage('玩家执黑先手，请点击棋盘落子');
                     } else { // AI is black
                         logMessage('开元执黑先手');
-                        setTimeout(() => { if (!gameOver) aiMove(); }, 500);
+                        aiMoveTimeoutId = setTimeout(() => { if (!gameOver) aiMove(currentPlayer); }, 500);
                     }
                 } else if (gameMode === 2) { // Player vs Player mode
                     // 玩家 vs 玩家 模式
@@ -1399,7 +1407,7 @@
                     updateGameStatus();
                     if (gameMode === 1) { // If Player vs AI mode, it's AI's turn
                         const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || (!playerStartsWithBlack && currentPlayer === 1);
-                        if (isAiTurn) aiMove();
+                        if (isAiTurn) aiMove(currentPlayer); // Pass currentPlayer
                     }
                     resetIdleTimer(); // Reset idle timer after player action
                 });
@@ -1407,98 +1415,105 @@
             
             // AI move logic
             // AI 落子逻辑
-            function aiMove() {
-                if (gameOver || isAiThinking) return;
+            function aiMove(playerToMove = currentPlayer) { // Default to global currentPlayer
+                console.log(`[DEBUG] aiMove called for player ${playerToMove}. Current global currentPlayer: ${currentPlayer}, isAiThinking: ${isAiThinking}, gameOver: ${gameOver}`);
+                if (gameOver || isAiThinking) {
+                    console.log(`[DEBUG] aiMove blocked: gameOver=${gameOver}, isAiThinking=${isAiThinking}`);
+                    return;
+                }
                 
+                // Ensure the AI is moving for the correct player based on the global state
+                // This check is important to prevent an AI from moving if it's not its turn,
+                // especially if multiple aiMove calls somehow get queued up.
+                if (playerToMove !== currentPlayer) {
+                    console.warn(`[DEBUG] aiMove called for player ${playerToMove} but it's currently player ${currentPlayer}'s turn. Skipping.`);
+                    return;
+                }
+
                 isAiThinking = true; // Set AI thinking flag
                 const aiStartTime = performance.now();
                 
-                const currentAiPlayer = currentPlayer; // Capture current player state
+                const currentAiPlayer = playerToMove; // Use the passed argument
                 const aiName = getPlayerName(currentAiPlayer);
                 updateGameStatus(`${aiName} 💭`); // Update game status to AI thinking
                 gameStatus.classList.add('thinking-status'); // Add thinking animation
 
-                console.log(`[DEBUG] aiMove START: currentPlayer=${currentPlayer}, aiName=${aiName}, gameCount=${gameCount}`);
-                if (gameMode === 3) {
-                    console.log(`[DEBUG] AI vs AI Roles: Player 1 (Black): ${aiPlayerRoles[1]?.name}, Player 2 (White): ${aiPlayerRoles[2]?.name}`);
-                }
+                console.log(`[DEBUG] AI ${aiName} (Player ${currentAiPlayer}) is starting its turn.`);
 
                 const config = difficultyConfig[difficulty];
-                // Simulate AI thinking time
-                // 模拟 AI 思考时间
                 const thinkTime = config.thinkTimeRange[0] + Math.random() * (config.thinkTimeRange[1] - config.thinkTimeRange[0]);
 
-                // After simulating thinking time, send board data to Web Worker for calculation
-                // 在模拟思考时间后，将棋盘数据发送给 Web Worker 进行计算
-                setTimeout(() => {
+                aiMoveTimeoutId = setTimeout(() => { // Store the timeout ID
+                    console.log(`[DEBUG] Sending board to worker for AI ${aiName} (Player ${currentAiPlayer}).`);
                     aiWorker.postMessage({
                         board: gameBoard,
-                        currentPlayer: currentAiPlayer, // Send the captured player state
+                        currentPlayer: currentAiPlayer,
                         difficulty: difficulty,
                         moveHistory: moveHistory
                     });
                 }, thinkTime);
 
-                // Listen for messages from Web Worker (AI calculation results)
-                // 监听 Web Worker 的消息（AI 计算结果）
                 aiWorker.onmessage = (e) => {
                     const move = e.data;
+                    console.log(`[DEBUG] Worker returned move for AI ${aiName} (Player ${currentAiPlayer}): ${JSON.stringify(move)}`);
                     isAiThinking = false; // AI thinking ends
                     gameStatus.classList.remove('thinking-status'); // Remove thinking animation
 
                     if (move && !gameOver) {
                         const {x, y} = move;
-                        gameBoard[x][y] = currentAiPlayer; // AI places piece
-                        moveHistory.push({x, y, player: currentAiPlayer}); // Record move history
-                        lastMovePosition = {x, y}; // Update last move position
+                        gameBoard[x][y] = currentAiPlayer;
+                        moveHistory.push({x, y, player: currentAiPlayer});
+                        lastMovePosition = {x, y};
                         
                         const pieceColor = currentAiPlayer === 1 ? '黑' : '白';
                         const aiEndTime = performance.now();
                         const duration = (aiEndTime - aiStartTime) / 1000;
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子 (用时 ${duration.toFixed(2)} 秒)`);
 
-                        console.log(`[DEBUG] aiMove END: AI (${aiName}, Player ${currentAiPlayer}) placed ${pieceColor} piece at (${x+1},${y+1})`);
-
-                        // Play piece placement animation
-                        // 播放棋子放置动画
                         animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white', () => {
-                            updateDynamicZoom(); // Update board view (zoom and pan) after placing piece
-                            if (checkWin(x, y, currentAiPlayer)) { // Check for win
+                            console.log(`[DEBUG] animatePiecePlacement callback for AI ${aiName} (Player ${currentAiPlayer}) completed.`);
+                            updateDynamicZoom();
+                            if (checkWin(x, y, currentAiPlayer)) {
                                 gameOver = true;
                                 const winnerMessage = `${aiName}获胜！`;
                                 updateGameStatus(winnerMessage);
                                 showWinnerModal(winnerMessage);
+                                console.log(`[DEBUG] Game Over: ${winnerMessage}`);
                                 return;
                             }
-                            if (isBoardFull()) { // Check for draw
+                            if (isBoardFull()) {
                                 gameOver = true;
                                 updateGameStatus('平局！');
                                 showWinnerModal('平局！');
+                                console.log(`[DEBUG] Game Over: Draw.`);
                                 return;
                             }
-                            currentPlayer = currentAiPlayer === 1 ? 2 : 1; // Switch player
-                            console.log(`[DEBUG] animatePiecePlacement callback: currentPlayer switched to ${currentPlayer}.`);
+                            
+                            // Crucial part: switch player and schedule next AI move
+                            const previousPlayer = currentPlayer;
+                            currentPlayer = currentAiPlayer === 1 ? 2 : 1; // Update global currentPlayer
+                            console.log(`[DEBUG] Player switched from ${previousPlayer} to ${currentPlayer}. Next AI turn will be for Player ${currentPlayer}.`);
 
                             updateGameStatus();
-                            if (gameMode === 3 && !gameOver) { // If AI vs AI mode and game not over, continue AI move
-                                // 如果是 AI vs AI 模式且游戏未结束，则继续 AI 走子
-                                setTimeout(() => aiMove(), 1000);
+                            if (gameMode === 3 && !gameOver) {
+                                console.log(`[DEBUG] Scheduling next AI move for Player ${currentPlayer} in 1 second.`);
+                                aiMoveTimeoutId = setTimeout(() => aiMove(currentPlayer), 1000); // Pass the new currentPlayer and store ID
+                            } else {
+                                console.log(`[DEBUG] Not scheduling next AI move. gameMode=${gameMode}, gameOver=${gameOver}`);
                             }
-                            resetIdleTimer(); // Reset idle timer after AI action
+                            resetIdleTimer();
                         });
                     } else if (!gameOver) {
-                        console.warn("AI worker returned no move.");
-                        logMessage("AI未能找到有效落子，请刷新重试。"); // More friendly message
+                        console.warn(`[DEBUG] AI worker returned no move for AI ${aiName} (Player ${currentAiPlayer}).`);
+                        logMessage("AI未能找到有效落子，请刷新重试。");
                         isAiThinking = false;
                         gameStatus.classList.remove('thinking-status');
                         updateGameStatus();
                     }
                 };
                 
-                // Listen for Web Worker errors
-                // 监听 Web Worker 的错误
                 aiWorker.onerror = (e) => {
-                    console.error(`Error from AI worker:`, e);
+                    console.error(`[DEBUG] Error from AI worker for AI ${aiName} (Player ${currentAiPlayer}):`, e);
                     logMessage("AI计算出错，请刷新重试。");
                     isAiThinking = false;
                     gameStatus.classList.remove('thinking-status');
