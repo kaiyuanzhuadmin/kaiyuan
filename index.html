@@ -1190,11 +1190,11 @@
 
                 if (gameMode === 3) { // AI vs AI mode
                     if (gameCount % 2 !== 0) {
-                        aiPlayerRoles = { 1: { name: '开元', color: '黑' }, 2: { name: 'Kaiyuan AI', color: '白' } };
+                        aiPlayerRoles = { 1: { name: '开元', color: '黑' }, 2: { name: 'Kaiyuan', color: '白' } };
                         logMessage('开元执黑先手');
                     } else {
-                        aiPlayerRoles = { 1: { name: 'Kaiyuan AI', color: '黑' }, 2: { name: '开元', color: '白' } };
-                        logMessage('Kaiyuan AI执黑先手');
+                        aiPlayerRoles = { 1: { name: 'Kaiyuan', color: '黑' }, 2: { name: '开元', color: '白' } };
+                        logMessage('Kaiyuan执黑先手');
                     }
                     updateGameStatus();
                     // Add a short delay for the first AI vs AI move to ensure UI is ready
@@ -1367,7 +1367,7 @@
                 // 检查游戏是否结束、当前位置是否有棋子、是否为 AI vs AI 模式、是否正在进行缩放动画或 AI 正在思考
                 if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3 || isAnimatingZoom || isAiThinking) {
                     if (isAnimatingZoom) logMessage('正在进行窗口缩放动画，请稍候再落子。');
-                    if (isAiThinking) logMessage('AI正在思考，请稍候。');
+                    if (isAiThinking) logMessage('开元正在思考，请稍候。');
                     return;
                 }
                 
@@ -1688,7 +1688,7 @@
                 }
 
                 countdownValue = 3; // Start countdown from 3 seconds
-                countdownText.textContent = `自动滚动至棋盘：${countdownValue}s`;
+                countdownText.textContent = `自动滑动至棋盘：${countdownValue}s`;
                 countdownWindow.classList.add('show');
 
                 countdownTimer = setInterval(() => {
@@ -1958,11 +1958,11 @@
             
             undoBtn.addEventListener('click', () => {
                 if (gameOver || isAiThinking) {
-                    logMessage(isAiThinking ? 'AI正在思考，无法悔棋。' : '游戏已结束，无法悔棋。');
+                    logMessage(isAiThinking ? '开元正在思考，无法悔棋。' : '游戏已结束，无法悔棋。');
                     return;
                 }
                 if (gameMode === 1 && undoChances <= 0) { logMessage('悔棋机会不足，请尝试兑换。'); return; }
-                if (gameMode === 3) { logMessage('AI vs AI 模式下无法悔棋。'); return; }
+                if (gameMode === 3) { logMessage('开元 vs Kaiyuan 模式下无法悔棋。'); return; }
                 if (moveHistory.length === 0) { logMessage('棋盘上没有可悔的棋子。'); return; }
                 
                 const undoCount = gameMode === 1 ? Math.min(2, moveHistory.length) : 1; // Undo two steps in Player vs AI mode, one step in other modes
