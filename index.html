@@ -418,6 +418,30 @@
         .hidden {
             display: none !important;
         }
+
+        /* Countdown Window Styles */
+        #countdown-window {
+            display: none; /* Hidden by default */
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1001;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: opacity 0.3s ease-in-out;
+            opacity: 0;
+        }
+
+        #countdown-window.show {
+            display: block;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -535,6 +559,11 @@
         </div>
     </div>
 
+    <!-- New: Countdown window for inactivity -->
+    <div id="countdown-window">
+        <span id="countdown-text"></span>
+    </div>
+
     <audio id="music" loop autoplay>
         <source src="jasmine_flower.mp3" type="audio/mp3">
     </audio>
@@ -556,39 +585,53 @@
             3: { searchDepth: 4, randomMoveChance: 0.0 }
         };
 
+        // New: Transposition table for caching board states
+        const transpositionTable = new Map();
+
+        // New: Function to generate a unique hash for the current board state
+        // 用于生成当前棋盘状态的唯一哈希值。
+        // 对于更健壮的生产环境解决方案，请考虑使用 Zobrist 哈希。
+        function getBoardHash(board) {
+            return board.flat().join('');
+        }
+
         // --- All AI calculation functions are moved here ---
+        // 所有 AI 计算函数都在这里
         function evaluatePattern(pattern) {
             // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
+            // P：玩家棋子，O：对手棋子，_：空，B：边界/阻塞
             // Five in a row (winning condition)
+            // 五子连珠（获胜条件）
             if (pattern.includes('PPPPP')) return 100000;
 
-            // Live Four: _PPPP_
+            // Live Four: _PPPP_ (活四)
             if (pattern.includes('_PPPP_')) return 10000;
             if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 7000;
             
-            // Blocked Four
+            // Blocked Four (冲四)
             if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 1200;
             if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 1800;
 
-            // Live Three: _PPP_
+            // Live Three: _PPP_ (活三)
             if (pattern.includes('_PPP_')) return 690;
             if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660;
 
-            // Blocked Three
+            // Blocked Three (眠三)
             if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100;
             if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 150;
 
-            // Live Two: __PP__
+            // Live Two: __PP__ (活二)
             if (pattern.includes('__PP__')) return 100;
             if (pattern.includes('__P_P__')) return 82;
 
-            // Blocked Two
+            // Blocked Two (眠二)
             if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8;
             
-            // Live One
+            // Live One (活一)
             if (pattern.includes('_P_')) return 10;
             
             // Defensive evaluation (opponent's patterns)
+            // 防守评估（对手的棋型）
             const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
             if (opponentPattern.includes('PPPPP')) return -900000;
             if (opponentPattern.includes('_PPPP_')) return -40000;
@@ -602,13 +645,14 @@
             return 1;
         }
 
+        // 评估单个位置的攻防价值
         function evaluatePosition(row, col, player) {
             const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
             let totalScore = 0;
             const centerRow = Math.floor(BOARD_SIZE / 2);
             const centerCol = Math.floor(BOARD_SIZE / 2);
             const distanceFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
-            totalScore += Math.max(0, 10 - distanceFromCenter);
+            totalScore += Math.max(0, 10 - distanceFromCenter); // 靠近中心有额外分数
             
             directions.forEach(([dx, dy]) => {
                 let pattern = '';
@@ -616,32 +660,36 @@
                     const newRow = row + i * dx;
                     const newCol = col + i * dy;
                     if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE) {
-                        pattern += 'B';
+                        pattern += 'B'; // 边界
                     } else if (gameBoard[newRow][newCol] === player) {
-                        pattern += 'P';
+                        pattern += 'P'; // 己方棋子
                     } else if (gameBoard[newRow][newCol] === 0) {
-                        pattern += '_';
+                        pattern += '_'; // 空位
                     } else {
-                        pattern += 'O';
+                        pattern += 'O'; // 对手棋子
                     }
                 }
                 const midIndex = 4;
+                // 将当前落子位置标记为己方棋子，以评估该位置的价值
                 pattern = pattern.substring(0, midIndex) + 'P' + pattern.substring(midIndex + 1);
                 totalScore += evaluatePattern(pattern);
             });
             return totalScore;
         }
 
+        // 检查是否获胜
         function checkWin(x, y, player) {
-            const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+            const directions = [[1, 0], [0, 1], [1, 1], [1, -1]]; // 水平、垂直、主对角线、副对角线
             for (const [dx, dy] of directions) {
                 let count = 1;
+                // 向一个方向检查
                 for (let i = 1; i < 5; i++) {
                     const nx = x + dx * i;
                     const ny = y + dy * i;
                     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE || gameBoard[nx][ny] !== player) break;
                     count++;
                 }
+                // 向另一个方向检查
                 for (let i = 1; i < 5; i++) {
                     const nx = x - dx * i;
                     const ny = y - dy * i;
@@ -653,26 +701,29 @@
             return false;
         }
 
+        // 评估整个棋盘的价值
         function evaluateBoard(player) {
             let totalScore = 0;
             const opponent = player === 1 ? 2 : 1;
             for (let i = 0; i < BOARD_SIZE; i++) {
                 for (let j = 0; j < BOARD_SIZE; j++) {
                     if (gameBoard[i][j] === player) {
-                        totalScore += evaluatePosition(i, j, player);
+                        totalScore += evaluatePosition(i, j, player); // 己方棋子的进攻价值
                     } else if (gameBoard[i][j] === opponent) {
-                        totalScore -= evaluatePosition(i, j, opponent) * 3.0;
+                        totalScore -= evaluatePosition(i, j, opponent) * 3.0; // 对手棋子的威胁价值（加倍惩罚）
                     }
                 }
             }
             return totalScore;
         }
 
+        // 获取并排序可能的走法
         function getOrderedMoves(currentPlayer) {
             const moves = [];
             let minX = BOARD_SIZE, maxX = -1, minY = BOARD_SIZE, maxY = -1;
             let hasPieces = false;
 
+            // 找到棋盘上已有棋子的最小和最大边界
             for (let i = 0; i < BOARD_SIZE; i++) {
                 for (let j = 0; j < BOARD_SIZE; j++) {
                     if (gameBoard[i][j] !== 0) {
@@ -686,10 +737,12 @@
             }
 
             if (!hasPieces) {
+                // 如果棋盘为空，建议在中心落子
                 moves.push({ x: Math.floor(BOARD_SIZE / 2), y: Math.floor(BOARD_SIZE / 2), score: 0 });
                 return moves;
             }
 
+            // 在已有棋子周围的区域进行搜索，减少不必要的计算
             const searchMinX = Math.max(0, minX - 2);
             const searchMaxX = Math.min(BOARD_SIZE - 1, maxX + 2);
             const searchMinY = Math.max(0, minY - 2);
@@ -697,66 +750,96 @@
 
             for (let i = searchMinX; i <= searchMaxX; i++) {
                 for (let j = searchMinY; j <= searchMaxY; j++) {
-                    if (gameBoard[i][j] === 0) {
+                    if (gameBoard[i][j] === 0) { // 只考虑空位
                         const scoreForPlayer = evaluatePosition(i, j, currentPlayer);
                         const scoreForOpponent = evaluatePosition(i, j, currentPlayer === 1 ? 2 : 1);
-                        const combinedScore = scoreForPlayer + scoreForOpponent * 3.0;
+                        // 综合攻防价值：进攻分数 + 防守分数（对手威胁）* 3.0
+                        const combinedScore = scoreForPlayer + scoreForOpponent * 3.0; 
                         moves.push({ x: i, y: j, score: combinedScore });
                     }
                 }
             }
+            // 根据综合分数降序排序，并限制搜索的走法数量，提高效率
             return moves.sort((a, b) => b.score - a.score).slice(0, 40);
         }
 
+        // Minimax 算法结合 Alpha-Beta 剪枝
         function minimax(depth, alpha, beta, isMaximizingPlayer, player) {
+            // 检查置换表，如果已计算过此局面且深度足够，则直接返回缓存结果
+            const currentBoardHash = getBoardHash(gameBoard);
+            const cachedResult = transpositionTable.get(currentBoardHash);
+            if (cachedResult && cachedResult.depth >= depth) {
+                return cachedResult;
+            }
+
+            // 达到搜索深度，评估当前棋盘
             if (depth === 0) {
-                return { score: evaluateBoard(player), move: null };
+                const score = evaluateBoard(player);
+                const result = { score: score, move: null };
+                // 存储结果到置换表
+                transpositionTable.set(currentBoardHash, { score: score, depth: depth, move: null });
+                return result;
             }
             
             const moves = getOrderedMoves(player);
-            if (moves.length === 0) return { score: 0, move: null };
+            if (moves.length === 0) { // 没有可走的步数
+                const result = { score: 0, move: null };
+                transpositionTable.set(currentBoardHash, { score: 0, depth: depth, move: null });
+                return result;
+            }
             
             let bestMove = null;
             
-            if (isMaximizingPlayer) {
+            if (isMaximizingPlayer) { // 当前是最大化玩家（AI 自身）
                 let maxScore = -Infinity;
                 for (const move of moves) {
-                    gameBoard[move.x][move.y] = player;
-                    if (checkWin(move.x, move.y, player)) {
-                        gameBoard[move.x][move.y] = 0;
-                        return { score: 100000, move };
+                    gameBoard[move.x][move.y] = player; // 尝试落子
+                    if (checkWin(move.x, move.y, player)) { // 如果当前走法直接获胜
+                        gameBoard[move.x][move.y] = 0; // 撤销落子
+                        const result = { score: 100000, move: move };
+                        transpositionTable.set(currentBoardHash, { score: 100000, depth: depth, move: move });
+                        return result; // 直接返回高分
                     }
+                    // 递归调用 minimax
                     const result = minimax(depth - 1, alpha, beta, false, player === 1 ? 2 : 1);
-                    gameBoard[move.x][move.y] = 0;
+                    gameBoard[move.x][move.y] = 0; // 撤销落子
                     if (result.score > maxScore) {
                         maxScore = result.score;
                         bestMove = move;
                     }
-                    alpha = Math.max(alpha, result.score);
-                    if (beta <= alpha) break;
+                    alpha = Math.max(alpha, result.score); // 更新 alpha 值
+                    if (beta <= alpha) break; // Alpha-Beta 剪枝
                 }
-                return { score: maxScore, move: bestMove };
-            } else {
+                const finalResult = { score: maxScore, move: bestMove };
+                transpositionTable.set(currentBoardHash, { score: maxScore, depth: depth, move: bestMove });
+                return finalResult;
+            } else { // 当前是最小化玩家（对手）
                 let minScore = Infinity;
                 for (const move of moves) {
-                    gameBoard[move.x][move.y] = player;
-                    if (checkWin(move.x, move.y, player)) {
-                        gameBoard[move.x][move.y] = 0;
-                        return { score: -100000, move };
+                    gameBoard[move.x][move.y] = player; // 尝试落子
+                    if (checkWin(move.x, move.y, player)) { // 如果对手当前走法直接获胜
+                        gameBoard[move.x][move.y] = 0; // 撤销落子
+                        const result = { score: -100000, move: move };
+                        transpositionTable.set(currentBoardHash, { score: -100000, depth: depth, move: move });
+                        return result; // 直接返回低分
                     }
+                    // 递归调用 minimax
                     const result = minimax(depth - 1, alpha, beta, true, player === 1 ? 2 : 1);
-                    gameBoard[move.x][move.y] = 0;
+                    gameBoard[move.x][move.y] = 0; // 撤销落子
                     if (result.score < minScore) {
                         minScore = result.score;
                         bestMove = move;
                     }
-                    beta = Math.min(beta, result.score);
-                    if (beta <= alpha) break;
+                    beta = Math.min(beta, result.score); // 更新 beta 值
+                    if (beta <= alpha) break; // Alpha-Beta 剪枝
                 }
-                return { score: minScore, move: bestMove };
+                const finalResult = { score: minScore, move: bestMove };
+                transpositionTable.set(currentBoardHash, { score: minScore, depth: depth, move: bestMove });
+                return finalResult;
             }
         }
 
+        // 寻找直接获胜的走法
         function findWinningMove(player) {
             for (let i = 0; i < BOARD_SIZE; i++) {
                 for (let j = 0; j < BOARD_SIZE; j++) {
@@ -773,39 +856,43 @@
             return null;
         }
 
+        // 获取最佳走法
         function getBestMove(currentPlayer, difficulty) {
             const config = difficultyConfig[difficulty];
             
+            // 优先检查是否有直接获胜的走法
             const winMove = findWinningMove(currentPlayer);
             if (winMove) return winMove;
             
+            // 检查对手是否有直接获胜的威胁，并进行阻断
             const opponent = currentPlayer === 1 ? 2 : 1;
             const blockMove = findWinningMove(opponent);
             if (blockMove) return blockMove;
             
+            // 使用 Minimax 算法进行深度搜索
             const result = minimax(config.searchDepth, -Infinity, Infinity, true, currentPlayer);
             if (result.move) {
                 return result.move;
             }
 
-            // Fallback if minimax fails
+            // 如果 Minimax 算法未能找到最佳走法（不应该发生，作为后备）
             const moves = getOrderedMoves(currentPlayer);
             return moves.length > 0 ? moves[0] : null;
         }
 
-        // Listen for messages from the main thread
+        // 监听主线程的消息
         self.onmessage = (e) => {
             const { board, currentPlayer, difficulty, moveHistory } = e.data;
-            gameBoard = board; // Update the worker's board state
+            gameBoard = board; // 更新 Worker 的棋盘状态
 
             let move;
             const config = difficultyConfig[difficulty];
 
-            // Restored: More nuanced opening move logic
+            // 针对开局的特殊处理，避免 AI 总是下在中心点
             if (moveHistory.length === 1) {
                 const playerFirstMove = moveHistory[0];
                 const candidateOpeningMoves = [];
-                const radius = 2;
+                const radius = 2; // 在玩家第一步周围的半径范围内寻找落子点
                 for (let i = Math.max(0, playerFirstMove.x - radius); i <= Math.min(BOARD_SIZE - 1, playerFirstMove.x + radius); i++) {
                     for (let j = Math.max(0, playerFirstMove.y - radius); j <= Math.min(BOARD_SIZE - 1, playerFirstMove.y + radius); j++) {
                         if (gameBoard[i][j] === 0 && !(i === playerFirstMove.x && j === playerFirstMove.y)) {
@@ -814,24 +901,27 @@
                     }
                 }
                 const center = Math.floor(BOARD_SIZE / 2);
-                const maxDistanceFromCenter = 5;
+                const maxDistanceFromCenter = 5; // 限制开局走法距离中心的距离
                 const filteredCandidates = candidateOpeningMoves.filter(m => {
                     const distFromCenter = Math.max(Math.abs(m.x - center), Math.abs(m.y - center));
                     return distFromCenter <= maxDistanceFromCenter;
                 });
                 if (filteredCandidates.length > 0) {
+                    // 从筛选出的候选中随机选择一个
                     move = filteredCandidates[Math.floor(Math.random() * filteredCandidates.length)];
                 } else {
+                    // 如果没有合适的开局走法，则回退到 Minimax
                     move = getBestMove(currentPlayer, difficulty);
                 }
-            } else if (Math.random() < config.randomMoveChance) {
+            } else if (Math.random() < config.randomMoveChance) { // 随机走子机会（用于增加难度变化）
                 const moves = getOrderedMoves(currentPlayer);
                 move = moves.length > 0 ? moves[Math.floor(Math.random() * Math.min(moves.length, 5))] : null;
             } else {
+                // 正常情况下使用 Minimax 算法获取最佳走法
                 move = getBestMove(currentPlayer, difficulty);
             }
             
-            // Post the result back to the main thread
+            // 将结果发送回主线程
             self.postMessage(move);
         };
     </script>
@@ -840,7 +930,7 @@
     <!-- ================================================================= -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Game constants
+            // 游戏常量
             const BOARD_SIZE = 15;
             const INTERNAL_DRAWING_CELL_SIZE = 50;
             const INTERNAL_DRAWING_PIECE_SIZE = INTERNAL_DRAWING_CELL_SIZE * 0.85;
@@ -851,28 +941,28 @@
 
             const devicePixelRatio = window.devicePixelRatio || 1;
 
-            // Restored: Auto-zoom/pan constants for mobile
+            // 移动端自动缩放/平移常量
             const IS_MOBILE = window.innerWidth < 768;
-            const IDLE_TIMEOUT_MS = 2000;
-            const INITIAL_MOBILE_VISIBLE_CELLS = 9;
-            const OPTIMAL_VIEW_PADDING_CELLS = 1;
+            const IDLE_TIMEOUT_MS = 5000; // 5秒无操作超时
+            const INITIAL_MOBILE_VISIBLE_CELLS = 9; // 移动端初始可见棋子数
+            const OPTIMAL_VIEW_PADDING_CELLS = 1; // 最佳视图的额外填充单元格
 
-            // Game state
+            // 游戏状态变量
             let gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
-            let currentPlayer = 1;
+            let currentPlayer = 1; // 1: 黑棋, 2: 白棋
             let gameOver = false;
-            let difficulty = 2;
-            let moveHistory = [];
-            let lastMovePosition = null;
-            let gameMode = 1;
-            let gameCount = 1;
-            let playerStartsWithBlack = true;
-            let undoChances = 0;
-            let isAiThinking = false;
-            let isAnimatingZoom = false;
-            let aiPlayerRoles = {};
+            let difficulty = 2; // 1: 简单, 2: 中等, 3: 困难
+            let moveHistory = []; // 存储所有落子历史
+            let lastMovePosition = null; // 上一个落子位置
+            let gameMode = 1; // 1: 玩家 vs AI, 2: 玩家 vs 玩家, 3: AI vs AI
+            let gameCount = 1; // 游戏局数
+            let playerStartsWithBlack = true; // 玩家是否执黑先手
+            let undoChances = 0; // 悔棋机会
+            let isAiThinking = false; // AI 是否正在思考
+            let isAnimatingZoom = false; // 棋盘是否正在进行缩放动画
+            let aiPlayerRoles = {}; // AI 玩家角色名称
 
-            // Restored: Auto-zoom/pan variables
+            // 自动缩放/平移相关变量
             let scale = 1.0;
             let translateX = 0;
             let translateY = 0;
@@ -883,13 +973,15 @@
             let initialPinchScale = 1;
             let initialPinchMidX = 0;
             let initialPinchMidY = 0;
-            let isGestureActive = false;
+            let isGestureActive = false; // 用户是否有活跃的手势操作
             let initialTouchX = 0;
             let initialTouchY = 0;
-            const tapThreshold = 10;
-            let idleTimer = null;
+            const tapThreshold = 10; // 轻触阈值
+            let idleTimer = null; // 空闲计时器
+            let countdownTimer = null; // 倒计时计时器
+            let countdownValue = 0; // 倒计时值
             
-            // DOM elements
+            // DOM 元素
             const canvas = document.getElementById('board');
             const ctx = canvas.getContext('2d');
             const boardContainer = document.querySelector('.board-container');
@@ -916,8 +1008,10 @@
             const musicToggle = document.getElementById('music-toggle');
             const musicText = document.getElementById('music-text');
             const redeemCodeInput = document.getElementById('redeem-code-input');
+            const countdownWindow = document.getElementById('countdown-window'); // 倒计时窗口
+            const countdownText = document.getElementById('countdown-text');     // 倒计时文本
 
-            // Off-screen canvases
+            // 离屏 Canvas，用于优化渲染性能
             const backgroundCanvas = document.createElement('canvas');
             const backgroundCtx = backgroundCanvas.getContext('2d');
             const piecesCanvas = document.createElement('canvas');
@@ -938,14 +1032,14 @@
             }
             aiWorker = createWorker();
 
-            // AI difficulty configuration (for timing on main thread)
+            // AI 难度配置（用于主线程的思考时间模拟）
             const difficultyConfig = {
                 1: { thinkTimeRange: [400, 1500] },
                 2: { thinkTimeRange: [800, 3500] },
                 3: { thinkTimeRange: [1000, 5500] }
             };
 
-            // Set Canvas size
+            // 设置 Canvas 尺寸
             canvas.width = LOGICAL_CANVAS_WIDTH * devicePixelRatio;
             canvas.height = LOGICAL_CANVAS_HEIGHT * devicePixelRatio;
             backgroundCanvas.width = canvas.width;
@@ -957,8 +1051,9 @@
             backgroundCtx.scale(devicePixelRatio, devicePixelRatio);
             piecesCtx.scale(devicePixelRatio, devicePixelRatio);
 
-            // --- Main Thread Functions ---
+            // --- 主线程函数 ---
             
+            // 检查是否获胜
             function checkWin(x, y, player) {
                 const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
                 for (const [dx, dy] of directions) {
@@ -978,10 +1073,12 @@
                 return false;
             }
 
+            // 检查棋盘是否已满
             function isBoardFull() {
                 return gameBoard.every(row => row.every(cell => cell !== 0));
             }
 
+            // 计算响应式显示尺寸
             function calculateResponsiveDisplaySize() {
                 const container = document.querySelector('.board-area');
                 const containerWidth = container.clientWidth;
@@ -994,6 +1091,7 @@
                 boardContainer.style.width = `${maxDisplaySize}px`;
                 boardContainer.style.height = `${maxDisplaySize}px`;
 
+                // 如果不是移动设备或还没有落子，则重置缩放和平移
                 if (!IS_MOBILE || moveHistory.length === 0) {
                     scale = 1.0;
                     translateX = 0;
@@ -1001,14 +1099,17 @@
                     clampPan();
                     applyTransform();
                 } else {
+                    // 移动设备则动态调整缩放
                     updateDynamicZoom(); 
                 }
             }
 
+            // 应用 Canvas 变换
             function applyTransform() {
                 canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
             }
             
+            // 初始化游戏
             function initGame() {
                 calculateResponsiveDisplaySize(); 
                 gameBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -1021,10 +1122,10 @@
                 clearGameLog();
                 logMessage(`第${gameCount}局开始`);
                 
-                drawStaticBoard();
-                updatePiecesCanvas();
+                drawStaticBoard(); // 绘制静态棋盘背景
+                updatePiecesCanvas(); // 更新棋子 Canvas
 
-                if (gameMode === 3) {
+                if (gameMode === 3) { // AI vs AI 模式
                     if (gameCount % 2 !== 0) {
                         aiPlayerRoles = { 1: { name: '开元', color: '黑' }, 2: { name: 'Kaiyuan AI', color: '白' } };
                         currentPlayer = 1; logMessage('开元执黑先手');
@@ -1033,27 +1134,28 @@
                         currentPlayer = 1; logMessage('Kaiyuan AI执黑先手');
                     }
                     updateGameStatus();
-                    setTimeout(() => aiMove(), 1000);
-                } else if (IS_MOBILE) { // Restored: Initial zoom for mobile
+                    // 为 AI vs AI 的第一步添加短暂延迟，确保 UI 准备就绪
+                    setTimeout(() => aiMove(), 1000); 
+                } else if (IS_MOBILE) { // 移动端初始缩放
                     const optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS });
                     scale = optimalView.scale;
                     translateX = optimalView.translateX;
                     translateY = optimalView.translateY;
                     clampPan();
                     applyTransform();
-                } else {
+                } else { // 非移动端重置缩放
                     scale = 1.0; translateX = 0; translateY = 0;
                     clampPan(); applyTransform();
                 }
 
-                if (gameMode === 1) {
+                if (gameMode === 1) { // 玩家 vs AI 模式
                     if (playerStartsWithBlack) {
                         currentPlayer = 1; logMessage('玩家执黑先手，请点击棋盘落子');
                     } else {
                         currentPlayer = 1; logMessage('开元执黑先手');
                         setTimeout(() => { if (!gameOver) aiMove(); }, 500);
                     }
-                } else if (gameMode === 2) {
+                } else if (gameMode === 2) { // 玩家 vs 玩家 模式
                     currentPlayer = 1; logMessage('玩家1执黑先手，请点击棋盘落子');
                 }
                 
@@ -1062,9 +1164,10 @@
                 winnerModal.style.display = 'none';
                 updateUndoChancesDisplay();
                 drawBoard();
-                resetIdleTimer();
+                resetIdleTimer(); // 游戏初始化时重置空闲计时器
             }
 
+            // 绘制静态棋盘背景
             function drawStaticBoard() {
                 backgroundCtx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 const boardGradient = backgroundCtx.createLinearGradient(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
@@ -1087,6 +1190,7 @@
                 starPoints.forEach(point => drawStarPoint(point.x, point.y, backgroundCtx));
             }
 
+            // 更新棋子 Canvas
             function updatePiecesCanvas() {
                 piecesCtx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 for (let i = 0; i < BOARD_SIZE; i++) {
@@ -1097,6 +1201,7 @@
                 }
             }
             
+            // 绘制棋盘（包括背景和棋子）
             function drawBoard() {
                 ctx.clearRect(0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
                 ctx.drawImage(backgroundCanvas, 0, 0, LOGICAL_CANVAS_WIDTH, LOGICAL_CANVAS_HEIGHT);
@@ -1104,6 +1209,7 @@
                 if (lastMovePosition) drawLastMoveMarker(lastMovePosition.x, lastMovePosition.y);
             }
             
+            // 绘制星位
             function drawStarPoint(x, y, targetCtx) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
@@ -1116,6 +1222,7 @@
                 targetCtx.fillStyle = '#8B4513'; targetCtx.fill();
             }
             
+            // 绘制棋子
             function drawPiece(x, y, color, pieceScale = 1, targetCtx = ctx) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
@@ -1140,6 +1247,7 @@
                 targetCtx.lineWidth = 1; targetCtx.stroke();
             }
 
+            // 棋子放置动画
             function animatePiecePlacement(x, y, playerColor, callback) {
                 let animationStartTime = null;
                 const animationDuration = 200;
@@ -1147,52 +1255,57 @@
                     if (!animationStartTime) animationStartTime = currentTime;
                     const elapsedTime = currentTime - animationStartTime;
                     const progress = Math.min(elapsedTime / animationDuration, 1);
-                    const pieceAnimationScale = 0.5 + (0.5 * progress);
-                    drawBoard();
-                    drawPiece(x, y, playerColor, pieceAnimationScale, ctx);
+                    const pieceAnimationScale = 0.5 + (0.5 * progress); // 从小变大
+                    drawBoard(); // 每次动画帧重新绘制棋盘
+                    drawPiece(x, y, playerColor, pieceAnimationScale, ctx); // 绘制动画中的棋子
                     if (progress < 1) requestAnimationFrame(animate);
                     else {
-                        updatePiecesCanvas();
-                        drawBoard();
+                        updatePiecesCanvas(); // 动画结束后更新离屏 Canvas
+                        drawBoard(); // 最终绘制
                         if (callback) callback();
                     }
                 }
                 requestAnimationFrame(animate);
             }
             
+            // 绘制最后一步标记
             function drawLastMoveMarker(x, y) {
                 const centerX = INTERNAL_DRAWING_BOARD_PADDING + x * INTERNAL_DRAWING_CELL_SIZE;
                 const centerY = INTERNAL_DRAWING_BOARD_PADDING + y * INTERNAL_DRAWING_CELL_SIZE;
                 const radius = INTERNAL_DRAWING_PIECE_SIZE / 4;
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = '#FF4500';
+                ctx.fillStyle = '#FF4500'; // 橙红色
                 ctx.shadowColor = 'rgba(255, 69, 0, 0.7)'; ctx.shadowBlur = 8;
                 ctx.fill();
-                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; // 清除阴影
             }
             
+            // 处理玩家落子
             function handlePlayerMove(x, y) {
+                // 检查游戏是否结束、当前位置是否有棋子、是否为 AI vs AI 模式、是否正在进行缩放动画或 AI 正在思考
                 if (gameOver || gameBoard[x][y] !== 0 || gameMode === 3 || isAnimatingZoom || isAiThinking) {
                     if (isAnimatingZoom) logMessage('正在进行窗口缩放动画，请稍候再落子。');
                     if (isAiThinking) logMessage('AI正在思考，请稍候。');
                     return;
                 }
                 
+                // 检查是否轮到玩家落子
                 const isPlayerTurn = (gameMode === 1 && ((playerStartsWithBlack && currentPlayer === 1) || (!playerStartsWithBlack && currentPlayer === 2))) || (gameMode === 2);
                 if (!isPlayerTurn) return;
                 
-                gameBoard[x][y] = currentPlayer;
-                moveHistory.push({x, y, player: currentPlayer});
-                lastMovePosition = {x, y};
+                gameBoard[x][y] = currentPlayer; // 落子
+                moveHistory.push({x, y, player: currentPlayer}); // 记录落子历史
+                lastMovePosition = {x, y}; // 更新最后落子位置
                 
                 const playerName = getPlayerName(currentPlayer);
                 const pieceColor = currentPlayer === 1 ? '黑' : '白';
                 logMessage(`${playerName}在(${x+1},${y+1})落${pieceColor}子`);
                 
+                // 播放棋子放置动画
                 animatePiecePlacement(x, y, currentPlayer === 1 ? 'black' : 'white', () => {
-                    updateDynamicZoom(); // Restored: Update zoom after move
-                    if (checkWin(x, y, currentPlayer)) {
+                    updateDynamicZoom(); // 落子后更新棋盘视图（缩放和平移）
+                    if (checkWin(x, y, currentPlayer)) { // 检查是否获胜
                         gameOver = true;
                         const winnerMessage = `${playerName}获胜！`;
                         updateGameStatus(winnerMessage);
@@ -1200,37 +1313,43 @@
                         showWinnerModal(winnerMessage);
                         return;
                     }
-                    if (isBoardFull()) {
+                    if (isBoardFull()) { // 检查是否平局
                         gameOver = true;
                         updateGameStatus('平局！');
                         logMessage('游戏结束，平局！');
                         showWinnerModal('平局！');
                         return;
                     }
-                    currentPlayer = currentPlayer === 1 ? 2 : 1;
+                    currentPlayer = currentPlayer === 1 ? 2 : 1; // 切换玩家
                     updateGameStatus();
-                    if (gameMode === 1) {
+                    if (gameMode === 1) { // 如果是玩家 vs AI 模式，则轮到 AI
                         const isAiTurn = (playerStartsWithBlack && currentPlayer === 2) || (!playerStartsWithBlack && currentPlayer === 1);
                         if (isAiTurn) aiMove();
                     }
-                    resetIdleTimer();
+                    resetIdleTimer(); // 玩家操作后重置空闲计时器
                 });
             }
             
+            // AI 落子逻辑
             function aiMove() {
                 if (gameOver || isAiThinking) return;
                 
-                isAiThinking = true;
+                isAiThinking = true; // 设置 AI 思考中标志
                 const aiStartTime = performance.now();
                 
                 const currentAiPlayer = currentPlayer;
                 const aiName = getPlayerName(currentAiPlayer);
-                updateGameStatus(`${aiName} 💭`);
-                gameStatus.classList.add('thinking-status');
+                updateGameStatus(`${aiName} 💭`); // 更新游戏状态为 AI 思考中
+                gameStatus.classList.add('thinking-status'); // 添加思考动画
+
+                // 调试 AI vs AI 模式的日志
+                console.log(`AI Move: ${aiName} (Player ${currentAiPlayer}) is thinking...`);
 
                 const config = difficultyConfig[difficulty];
+                // 模拟 AI 思考时间
                 const thinkTime = config.thinkTimeRange[0] + Math.random() * (config.thinkTimeRange[1] - config.thinkTimeRange[0]);
 
+                // 在模拟思考时间后，将棋盘数据发送给 Web Worker 进行计算
                 setTimeout(() => {
                     aiWorker.postMessage({
                         board: gameBoard,
@@ -1240,50 +1359,60 @@
                     });
                 }, thinkTime);
 
+                // 监听 Web Worker 的消息（AI 计算结果）
                 aiWorker.onmessage = (e) => {
                     const move = e.data;
-                    isAiThinking = false;
-                    gameStatus.classList.remove('thinking-status');
+                    isAiThinking = false; // AI 思考结束
+                    gameStatus.classList.remove('thinking-status'); // 移除思考动画
 
                     if (move && !gameOver) {
                         const {x, y} = move;
-                        gameBoard[x][y] = currentAiPlayer;
-                        moveHistory.push({x, y, player: currentAiPlayer});
-                        lastMovePosition = {x, y};
+                        gameBoard[x][y] = currentAiPlayer; // AI 落子
+                        moveHistory.push({x, y, player: currentAiPlayer}); // 记录落子历史
+                        lastMovePosition = {x, y}; // 更新最后落子位置
                         
                         const pieceColor = currentAiPlayer === 1 ? '黑' : '白';
                         const aiEndTime = performance.now();
                         const duration = (aiEndTime - aiStartTime) / 1000;
                         logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子 (用时 ${duration.toFixed(2)} 秒)`);
 
+                        // 调试 AI vs AI 模式的日志
+                        console.log(`AI Move: ${aiName} (Player ${currentAiPlayer}) made move at (${x+1},${y+1}).`);
+
+                        // 播放棋子放置动画
                         animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white', () => {
-                            updateDynamicZoom(); // Restored: Update zoom after AI move
-                            if (checkWin(x, y, currentAiPlayer)) {
+                            updateDynamicZoom(); // 落子后更新棋盘视图（缩放和平移）
+                            if (checkWin(x, y, currentAiPlayer)) { // 检查是否获胜
                                 gameOver = true;
                                 const winnerMessage = `${aiName}获胜！`;
                                 updateGameStatus(winnerMessage);
                                 showWinnerModal(winnerMessage);
                                 return;
                             }
-                            if (isBoardFull()) {
+                            if (isBoardFull()) { // 检查是否平局
                                 gameOver = true;
                                 updateGameStatus('平局！');
                                 showWinnerModal('平局！');
                                 return;
                             }
-                            currentPlayer = currentAiPlayer === 1 ? 2 : 1;
+                            currentPlayer = currentAiPlayer === 1 ? 2 : 1; // 切换玩家
+                            // 调试 AI vs AI 模式的日志
+                            console.log(`AI Move: Current player switched to ${getPlayerName(currentPlayer)} (Player ${currentPlayer}).`);
+
                             updateGameStatus();
-                            if (gameMode === 3 && !gameOver) {
+                            if (gameMode === 3 && !gameOver) { // 如果是 AI vs AI 模式且游戏未结束，则继续 AI 走子
                                 setTimeout(() => aiMove(), 1000);
                             }
-                            resetIdleTimer();
+                            resetIdleTimer(); // AI 操作后重置空闲计时器
                         });
                     } else if (!gameOver) {
                         console.warn("AI worker returned no move.");
+                        logMessage("AI未能找到有效落子，请刷新重试。"); // 更友好的提示
                         updateGameStatus();
                     }
                 };
                 
+                // 监听 Web Worker 的错误
                 aiWorker.onerror = (e) => {
                     console.error(`Error from AI worker:`, e);
                     logMessage("AI计算出错，请刷新重试。");
@@ -1293,6 +1422,7 @@
                 };
             }
             
+            // 获取玩家名称
             function getPlayerName(player) {
                 if (gameMode === 2) return player === 1 ? '玩家1' : '玩家2';
                 if (gameMode === 3) {
@@ -1305,6 +1435,7 @@
                 return playerStartsWithBlack ? (player === 1 ? '玩家' : '开元') : (player === 1 ? '开元' : '玩家');
             }
             
+            // 更新游戏状态显示
             function updateGameStatus(message) {
                 gameCountDisplay.textContent = `第 ${gameCount} 局`;
                 if (message) {
@@ -1331,26 +1462,32 @@
                 }
             }
             
+            // 开始新游戏
             function startNewGame() {
                 gameCount++;
-                if (gameMode === 1) playerStartsWithBlack = !playerStartsWithBlack;
+                if (gameMode === 1) playerStartsWithBlack = !playerStartsWithBlack; // 玩家 vs AI 模式下交换先手
                 initGame();
             }
             
+            // 记录游戏日志
             function logMessage(message) {
                 const logEntry = document.createElement('p');
                 logEntry.textContent = message;
                 gameLog.appendChild(logEntry);
-                gameLog.scrollTop = gameLog.scrollHeight;
+                gameLog.scrollTop = gameLog.scrollHeight; // 自动滚动到底部
             }
             
+            // 清空游戏日志
             function clearGameLog() { gameLog.innerHTML = ''; }
+            // 显示获胜模态框
             function showWinnerModal(message) {
                 winnerModalTitle.textContent = '游戏结束';
                 winnerModalMessage.textContent = message;
                 winnerModal.style.display = 'block';
             }
+            // 更新悔棋机会显示
             function updateUndoChancesDisplay() { undoChancesDisplay.textContent = undoChances; }
+            // 处理兑换码
             function handleRedeemCode() {
                 const code = redeemCodeInput.value.trim().toLowerCase();
                 if (code === 'kaiyuan') {
@@ -1363,7 +1500,7 @@
                 redeemCodeInput.value = '';
             }
             
-            // --- Restored: Zoom, Pan, and Auto-Fit Logic ---
+            // --- 缩放、平移和自动适应逻辑 ---
             function clampPan() {
                 const initialScaleFactor = parseFloat(canvas.dataset.initialScale) || 1;
                 const currentDisplayWidth = LOGICAL_CANVAS_WIDTH * scale * initialScaleFactor;
@@ -1389,12 +1526,59 @@
                 translateY = Math.max(minYBound, Math.min(maxYBound, translateY));
             }
 
-            function resetIdleTimer() {
-                if (!IS_MOBILE) return;
-                clearTimeout(idleTimer);
-                idleTimer = setTimeout(startAutoFit, IDLE_TIMEOUT_MS);
+            // 检查棋盘区域是否大致在视窗内
+            function isBoardAreaInView() {
+                const rect = boardContainer.getBoundingClientRect();
+                // 如果棋盘区域至少 80% 的高度可见，并且水平方向没有滚动太远，则认为在视图中
+                const verticalThreshold = rect.height * 0.2; // 距离顶部/底部 20%
+                const horizontalThreshold = rect.width * 0.2; // 距离左侧/右侧 20%
+
+                return (
+                    rect.top >= -verticalThreshold &&
+                    rect.bottom <= (window.innerHeight + verticalThreshold) &&
+                    rect.left >= -horizontalThreshold &&
+                    rect.right <= (window.innerWidth + horizontalThreshold)
+                );
             }
 
+            // 重置空闲计时器并隐藏倒计时窗口
+            function resetIdleTimer() {
+                clearTimeout(idleTimer);
+                clearInterval(countdownTimer);
+                countdownWindow.classList.remove('show');
+                if (IS_MOBILE) { // 仅在移动设备上设置空闲计时器
+                    idleTimer = setTimeout(startCountdown, IDLE_TIMEOUT_MS);
+                }
+            }
+
+            // 启动自动滚动倒计时
+            function startCountdown() {
+                // 如果不是移动设备，或有活跃手势，或正在进行缩放动画，或游戏已结束，则不自动滚动
+                if (!IS_MOBILE || isGestureActive || isAnimatingZoom || gameOver) return; 
+                
+                // 如果棋盘区域已在视图中，则不启动倒计时
+                if (isBoardAreaInView()) {
+                    console.log("Board area is already in view, skipping auto-scroll countdown.");
+                    return;
+                }
+
+                countdownValue = 3; // 从 3 秒开始倒计时
+                countdownText.textContent = `自动滚动至棋盘：${countdownValue}s`;
+                countdownWindow.classList.add('show');
+
+                countdownTimer = setInterval(() => {
+                    countdownValue--;
+                    if (countdownValue > 0) {
+                        countdownText.textContent = `自动滚动至棋盘：${countdownValue}s`;
+                    } else {
+                        clearInterval(countdownTimer);
+                        countdownWindow.classList.remove('show');
+                        startAutoFit(); // 倒计时结束后触发自动滚动
+                    }
+                }, 1000);
+            }
+
+            // 获取棋子边界框
             function getPieceBoundingBox() {
                 if (moveHistory.length === 0) {
                     const mid = Math.floor(BOARD_SIZE / 2);
@@ -1408,6 +1592,7 @@
                 return { minX, maxX, minY, maxY };
             }
 
+            // 计算最佳视图（缩放和位移）
             function calculateOptimalView(options = {}) {
                 const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                 const containerWidth = boardContainer.clientWidth;
@@ -1415,6 +1600,7 @@
                 let contentLogicalWidth, contentLogicalHeight, centerLogicalX, centerLogicalY;
 
                 if (options.targetCenter && options.visibleCells) {
+                    // 以目标中心点为基准计算视图
                     const targetVisibleCells = options.visibleCells;
                     contentLogicalWidth = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
                     contentLogicalHeight = targetVisibleCells * INTERNAL_DRAWING_CELL_SIZE;
@@ -1423,6 +1609,7 @@
                     centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + (targetViewLogicalX + targetVisibleCells / 2) * INTERNAL_DRAWING_CELL_SIZE;
                     centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + (targetViewLogicalY + targetVisibleCells / 2) * INTERNAL_DRAWING_CELL_SIZE;
                 } else if (options.boundingBox) {
+                    // 根据棋子边界框计算视图
                     const { minX, maxX, minY, maxY } = options.boundingBox;
                     const paddedMinX = Math.max(0, minX - OPTIMAL_VIEW_PADDING_CELLS);
                     const paddedMaxX = Math.min(BOARD_SIZE - 1, maxX + OPTIMAL_VIEW_PADDING_CELLS);
@@ -1433,6 +1620,7 @@
                     centerLogicalX = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinX + paddedMaxX) / 2) * INTERNAL_DRAWING_CELL_SIZE;
                     centerLogicalY = INTERNAL_DRAWING_BOARD_PADDING + ((paddedMinY + paddedMaxY) / 2) * INTERNAL_DRAWING_CELL_SIZE;
                 } else {
+                    // 默认初始视图
                     contentLogicalWidth = INITIAL_MOBILE_VISIBLE_CELLS * INTERNAL_DRAWING_CELL_SIZE;
                     contentLogicalHeight = INITIAL_MOBILE_VISIBLE_CELLS * INTERNAL_DRAWING_CELL_SIZE;
                     centerLogicalX = LOGICAL_CANVAS_WIDTH / 2;
@@ -1440,7 +1628,7 @@
                 }
 
                 let newScale = Math.min(containerWidth / (contentLogicalWidth * initialScaleFactor), containerHeight / (contentLogicalHeight * initialScaleFactor));
-                newScale = Math.max(1.0, Math.min(newScale, 2.5));
+                newScale = Math.max(1.0, Math.min(newScale, 2.5)); // 限制缩放范围
                 const targetDisplayCenterX = centerLogicalX * newScale * initialScaleFactor;
                 const targetDisplayCenterY = centerLogicalY * newScale * initialScaleFactor;
                 const newTranslateX = containerWidth / 2 - targetDisplayCenterX;
@@ -1448,55 +1636,70 @@
                 return { scale: newScale, translateX: newTranslateX, translateY: newTranslateY };
             }
 
+            // 动画过渡到目标视图
             function animateToView(targetScale, targetX, targetY) {
-                isAnimatingZoom = true;
+                isAnimatingZoom = true; // 设置动画中标志，阻止玩家落子
                 scale = targetScale; translateX = targetX; translateY = targetY;
-                clampPan();
-                applyTransform();
-                // Fallback to ensure flag is reset
+                clampPan(); // 限制平移范围
+                applyTransform(); // 应用变换
+                // 动画结束后重置标志
                 setTimeout(() => { isAnimatingZoom = false; }, 600);
             }
 
+            // 更新动态缩放（移动端）
             function updateDynamicZoom() {
                 if (!IS_MOBILE) {
-                    animateToView(1.0, 0, 0);
+                    animateToView(1.0, 0, 0); // 非移动端始终保持默认视图
                     return;
                 }
                 let optimalView;
-                if (lastMovePosition) {
+                // 改进逻辑：当棋子数量超过2步时，优先显示所有棋子的全局视图
+                if (moveHistory.length > 2) { 
+                    const boundingBox = getPieceBoundingBox();
+                    optimalView = calculateOptimalView({ boundingBox: boundingBox });
+                } else if (lastMovePosition) {
+                    // 对于开局前几步，仍然聚焦于最后落子点
                     optimalView = calculateOptimalView({ targetCenter: lastMovePosition, visibleCells: 8 });
                 } else {
+                    // 初始状态或没有棋子时
                     optimalView = calculateOptimalView({ visibleCells: INITIAL_MOBILE_VISIBLE_CELLS });
                 }
                 animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
             }
 
+            // 自动适应棋盘视图（在倒计时后调用）
             function startAutoFit() {
-                if (!IS_MOBILE || isGestureActive || isAnimatingZoom) return;
-                const boundingBox = getPieceBoundingBox();
-                const optimalView = calculateOptimalView({ boundingBox: boundingBox });
-                animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY);
-                boardContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 如果不是移动设备，或有活跃手势，或正在进行缩放动画，或游戏已结束，则不自动适应
+                if (!IS_MOBILE || isGestureActive || isAnimatingZoom || gameOver) return;
+                const boundingBox = getPieceBoundingBox(); // 获取棋子边界框
+                const optimalView = calculateOptimalView({ boundingBox: boundingBox }); // 计算最佳视图
+                animateToView(optimalView.scale, optimalView.translateX, optimalView.translateY); // 动画过渡
+                // 滚动到棋盘区域
+                document.querySelector('.board-area').scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
+            // 计算两点距离
             function getDistance(t1, t2) { return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2)); }
+            // 计算两点中点
             function getMidpoint(t1, t2) { return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 }; }
 
-            // --- Event Listeners and Initialization ---
+            // --- 事件监听器和初始化 ---
 
-            initGame();
+            initGame(); // 初始化游戏
 
+            // 监听 CSS 变换动画结束事件
             canvas.addEventListener('transitionend', (event) => {
                 if (event.propertyName === 'transform') isAnimatingZoom = false;
             });
 
+            // 触摸事件监听器（移动端）
             canvas.addEventListener('touchstart', (e) => {
-                if (IS_MOBILE) { e.preventDefault(); isGestureActive = true; clearTimeout(idleTimer); }
-                if (e.touches.length === 1) {
+                if (IS_MOBILE) { e.preventDefault(); isGestureActive = true; resetIdleTimer(); } // 重置计时器
+                if (e.touches.length === 1) { // 单指拖动
                     isDragging = true;
                     lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
                     initialTouchX = e.touches[0].clientX; initialTouchY = e.touches[0].clientY;
-                } else if (e.touches.length === 2) {
+                } else if (e.touches.length === 2) { // 双指捏合缩放
                     isDragging = false;
                     initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
                     initialPinchScale = scale;
@@ -1509,16 +1712,16 @@
             }, { passive: false });
 
             canvas.addEventListener('touchmove', (e) => {
-                if (IS_MOBILE) { e.preventDefault(); isGestureActive = true; }
-                if (e.touches.length === 1 && isDragging) {
+                if (IS_MOBILE) { e.preventDefault(); isGestureActive = true; resetIdleTimer(); } // 重置计时器
+                if (e.touches.length === 1 && isDragging) { // 单指拖动
                     translateX += (e.touches[0].clientX - lastPanX);
                     translateY += (e.touches[0].clientY - lastPanY);
                     lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
                     clampPan(); applyTransform();
-                } else if (e.touches.length === 2) {
+                } else if (e.touches.length === 2) { // 双指捏合缩放
                     const currentPinchDistance = getDistance(e.touches[0], e.touches[1]);
                     let newScale = initialPinchScale * (currentPinchDistance / initialPinchDistance);
-                    newScale = Math.max(1.0, Math.min(newScale, 2.5));
+                    newScale = Math.max(1.0, Math.min(newScale, 2.5)); // 限制缩放范围
                     const rect = canvas.getBoundingClientRect();
                     const currentMidpoint = getMidpoint(e.touches[0], e.touches[1]);
                     const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
@@ -1532,10 +1735,10 @@
             canvas.addEventListener('touchend', (e) => {
                 isDragging = false; initialPinchDistance = 0;
                 clampPan(); applyTransform();
-                if (e.changedTouches.length === 1 && e.touches.length === 0) {
+                if (e.changedTouches.length === 1 && e.touches.length === 0) { // 单指轻触（落子）
                     const releasedTouch = e.changedTouches[0];
                     const moveDistance = Math.sqrt(Math.pow(releasedTouch.clientX - initialTouchX, 2) + Math.pow(releasedTouch.clientY - initialTouchY, 2));
-                    if (moveDistance < tapThreshold) {
+                    if (moveDistance < tapThreshold) { // 如果移动距离小于阈值，认为是轻触
                         const rect = canvas.getBoundingClientRect();
                         const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                         const logicalCanvasX = (releasedTouch.clientX - rect.left) / (scale * initialScaleFactor);
@@ -1548,19 +1751,21 @@
                 resetIdleTimer(); isGestureActive = false;
             });
 
+            // 鼠标事件监听器（桌面端）
             canvas.addEventListener('mousedown', (e) => {
                 if (!IS_MOBILE) {
                     isDragging = true; isGestureActive = true;
                     lastPanX = e.clientX; lastPanY = e.clientY;
                     initialTouchX = e.clientX; initialTouchY = e.clientY;
                 }
+                resetIdleTimer(); // 重置计时器
             });
 
             canvas.addEventListener('mouseup', (e) => {
                 if (!IS_MOBILE) {
                     isDragging = false;
                     const moveDistance = Math.sqrt(Math.pow(e.clientX - initialTouchX, 2) + Math.pow(e.clientY - initialTouchY, 2));
-                    if (moveDistance < tapThreshold) {
+                    if (moveDistance < tapThreshold) { // 如果移动距离小于阈值，认为是点击
                         const rect = canvas.getBoundingClientRect();
                         const initialScaleFactor = parseFloat(canvas.dataset.initialScale);
                         const logicalCanvasX = (e.clientX - rect.left) / (scale * initialScaleFactor);
@@ -1571,19 +1776,27 @@
                     }
                     isGestureActive = false;
                 }
+                resetIdleTimer(); // 重置计时器
             });
 
             canvas.addEventListener('mousemove', (e) => {
-                if (!IS_MOBILE && e.buttons === 1 && isDragging) {
+                if (!IS_MOBILE && e.buttons === 1 && isDragging) { // 鼠标左键按住拖动
                     translateX += (e.clientX - lastPanX);
                     translateY += (e.clientY - lastPanY);
                     lastPanX = e.clientX; lastPanY = e.clientY;
                     clampPan(); applyTransform();
                     isGestureActive = true;
                 }
+                resetIdleTimer(); // 重置计时器
             });
 
             canvas.addEventListener('mouseout', () => { if (!IS_MOBILE) { isDragging = false; isGestureActive = false; } });
+
+            // 添加全局事件监听器以重置空闲计时器
+            document.addEventListener('mousemove', resetIdleTimer);
+            document.addEventListener('keydown', resetIdleTimer);
+            document.addEventListener('click', resetIdleTimer);
+            document.addEventListener('scroll', resetIdleTimer); // 滚动时也重置
 
             let resizeTimeout;
             window.addEventListener('resize', () => {
@@ -1591,7 +1804,7 @@
                 resizeTimeout = setTimeout(() => {
                     calculateResponsiveDisplaySize();
                     drawStaticBoard(); updatePiecesCanvas(); drawBoard();
-                    resetIdleTimer();
+                    resetIdleTimer(); // 重置计时器
                 }, 150);
             });
             
@@ -1606,7 +1819,7 @@
                 if (gameMode === 3) { logMessage('AI vs AI 模式下无法悔棋。'); return; }
                 if (moveHistory.length === 0) { logMessage('棋盘上没有可悔的棋子。'); return; }
                 
-                const undoCount = gameMode === 1 ? Math.min(2, moveHistory.length) : 1;
+                const undoCount = gameMode === 1 ? Math.min(2, moveHistory.length) : 1; // 玩家 vs AI 模式悔两步，其他模式悔一步
                 if (gameMode === 1) undoChances--;
                 
                 for (let i = 0; i < undoCount; i++) {
@@ -1623,7 +1836,7 @@
                 updatePiecesCanvas(); drawBoard();
                 updateGameStatus(); updateUndoChancesDisplay();
                 logMessage(`悔棋 ${undoCount} 步`);
-                updateDynamicZoom(); resetIdleTimer();
+                updateDynamicZoom(); resetIdleTimer(); // 重置计时器
             });
             
             difficultyToggle.addEventListener('click', () => {
@@ -1632,7 +1845,7 @@
                 const winRates = ['较低', '中等', '较高']; 
                 difficultyText.textContent = `${difficultyLevels[difficulty - 1]}(胜率${winRates[difficulty - 1]})`;
                 logMessage(`游戏难度已切换至 ${difficultyLevels[difficulty - 1]} (开元胜率${winRates[difficulty - 1]})`);
-                resetIdleTimer();
+                resetIdleTimer(); // 重置计时器
             });
             
             modeToggle.addEventListener('click', () => {
@@ -1641,25 +1854,29 @@
                 modeText.textContent = modeNames[gameMode - 1];
                 playerStartsWithBlack = true; gameCount = 1;
                 logMessage(`游戏模式已切换至 ${modeNames[gameMode - 1]}`);
-                initGame();
+                initGame(); // initGame 会调用 resetIdleTimer
             });
             
             closeModalBtn.addEventListener('click', () => {
                 winnerModal.style.display = 'none';
-                startNewGame();
+                startNewGame(); // startNewGame 会调用 initGame，进而调用 resetIdleTimer
             });
             
             window.addEventListener('click', (event) => {
                 if (event.target === winnerModal) {
                     winnerModal.style.display = 'none';
-                    startNewGame();
+                    startNewGame(); // startNewGame 会调用 initGame，进而调用 resetIdleTimer
                 }
             });
 
-            redeemCodeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRedeemCode(); });
+            redeemCodeInput.addEventListener('keydown', (e) => { 
+                if (e.key === 'Enter') handleRedeemCode(); 
+                resetIdleTimer(); // 重置计时器
+            });
             redeemCodeInput.addEventListener('input', () => {
                 const value = redeemCodeInput.value.trim();
                 if (value.length === 7 && /^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(value)) handleRedeemCode();
+                resetIdleTimer(); // 重置计时器
             });
             
             musicToggle.addEventListener('click', () => {
@@ -1670,6 +1887,7 @@
                     music.pause();
                     musicText.textContent = '暂停';
                 }
+                resetIdleTimer(); // 重置计时器
             });
         });
     </script>
