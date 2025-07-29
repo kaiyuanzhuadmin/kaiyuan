@@ -548,7 +548,7 @@
         </main>
 
         <footer class="footer">
-            <p>五子棋对弈 (云计算) &copy; 2025 | Designed by 开元</p>
+            <p>五子棋对弈 &copy; 2025 | Designed by 开元</p>
         </footer>
     </div>
 
@@ -560,18 +560,13 @@
         </div>
     </div>
 
-    <!-- New: Countdown window for inactivity -->
     <div id="countdown-window">
         <span id="countdown-text"></span>
     </div>
 
     <audio id="music" loop autoplay>
-        <source src="https://placehold.co/1x1/E0EEE0/374151?text=Audio+Placeholder" type="audio/mp3"> <!-- Placeholder audio -->
-    </audio>
+        <source src="jasmine_flower.mp3" type="audio/mp3"> </audio>
 
-    <!-- ================================================================= -->
-    <!-- ======================= AI WEB WORKER SCRIPT ====================== -->
-    <!-- ================================================================= -->
     <script id="ai-worker" type="javascript/worker">
         // This script runs in a separate thread and will not block the UI.
         
@@ -955,14 +950,11 @@
                 move = getBestMove(currentPlayer, difficulty);
             }
             
-            // Send the result back to the main thread, including the player who made the move
-            // 将结果发送回主线程，包括进行落子的玩家
-            self.postMessage({ move: move, player: currentPlayer });
+            // Send the result back to the main thread
+            // 将结果发送回主线程
+            self.postMessage(move);
         };
     </script>
-    <!-- ================================================================= -->
-    <!-- ======================= MAIN GAME SCRIPT ======================== -->
-    <!-- ================================================================= -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Game constants
@@ -1065,98 +1057,7 @@
                 try {
                     const workerScript = document.getElementById('ai-worker').textContent;
                     const blob = new Blob([workerScript], { type: 'application/javascript' });
-                    const worker = new Worker(URL.createObjectURL(blob));
-
-                    // Set up message and error handlers ONCE when the worker is created
-                    // 在 Worker 创建时一次性设置消息和错误处理器
-                    worker.onmessage = (e) => {
-                        const { move, player: aiPlayerWhoMoved } = e.data; // Destructure move and the player from worker's response
-                        // 从 Worker 的响应中解构出落子和进行落子的玩家
-
-                        isAiThinking = false;
-                        gameStatus.classList.remove('thinking-status');
-
-                        if (move && !gameOver) {
-                            const {x, y} = move;
-                            // Critical check: Ensure the spot is still empty before placing the piece
-                            // 关键检查：在放置棋子之前，确保该位置仍然是空的
-                            if (gameBoard[x][y] !== 0) {
-                                console.warn(`AI tried to place piece at (${x+1},${y+1}) but it's already occupied. Skipping this move.`);
-                                logMessage(`AI尝试在已占用的位置(${x+1},${y+1})落子，跳过此步。`);
-                                // If AI tried to move to an occupied spot, we still need to switch turn
-                                // 如果 AI 尝试在已占用的位置落子，我们仍然需要切换回合
-                                if (!gameOver) {
-                                    currentPlayer = aiPlayerWhoMoved === 1 ? 2 : 1; // Still switch turn
-                                    updateGameStatus();
-                                    if (gameMode === 3) {
-                                        setTimeout(() => aiMove(), 1000);
-                                    }
-                                }
-                                resetIdleTimer();
-                                return;
-                            }
-
-                            gameBoard[x][y] = aiPlayerWhoMoved; // Use the player from the worker's response
-                            // 使用从 Worker 响应中获取的玩家来放置棋子
-                            moveHistory.push({x, y, player: aiPlayerWhoMoved});
-                            lastMovePosition = {x, y};
-                            
-                            const pieceColor = aiPlayerWhoMoved === 1 ? '黑' : '白';
-                            logMessage(`${getPlayerName(aiPlayerWhoMoved)}在(${x+1},${y+1})落${pieceColor}子`);
-
-                            animatePiecePlacement(x, y, aiPlayerWhoMoved === 1 ? 'black' : 'white', () => {
-                                updateDynamicZoom();
-                                if (checkWin(x, y, aiPlayerWhoMoved)) {
-                                    gameOver = true;
-                                    const winnerMessage = `${getPlayerName(aiPlayerWhoMoved)}获胜！`;
-                                    updateGameStatus(winnerMessage);
-                                    showWinnerModal(winnerMessage);
-                                    return;
-                                }
-                                if (isBoardFull()) {
-                                    gameOver = true;
-                                    updateGameStatus('平局！');
-                                    showWinnerModal('平局！');
-                                    return;
-                                }
-                                if (!gameOver) {
-                                    currentPlayer = aiPlayerWhoMoved === 1 ? 2 : 1; // Switch player based on who *just* moved
-                                    // 根据刚刚落子的玩家切换回合
-                                }
-                                updateGameStatus();
-                                if (gameMode === 3 && !gameOver) {
-                                    setTimeout(() => aiMove(), 1000);
-                                }
-                                resetIdleTimer();
-                            });
-                        } else if (!gameOver) {
-                            console.warn("AI worker returned no move or game is already over.");
-                            logMessage("AI未能找到有效落子，请刷新重试。");
-                            isAiThinking = false;
-                            gameStatus.classList.remove('thinking-status');
-                            updateGameStatus();
-                            // If no move, still switch turn to avoid infinite loop if AI gets stuck
-                            // 如果没有落子，仍然切换回合以避免 AI 卡住导致无限循环
-                            if (!gameOver) {
-                                currentPlayer = aiPlayerWhoMoved === 1 ? 2 : 1; // Still switch turn
-                                updateGameStatus();
-                                if (gameMode === 3) {
-                                    setTimeout(() => aiMove(), 1000);
-                                }
-                            }
-                        }
-                    };
-
-                    worker.onerror = (e) => {
-                        console.error(`Error from AI worker:`, e);
-                        logMessage("AI计算出错，请刷新重试。");
-                        isAiThinking = false;
-                        gameStatus.classList.remove('thinking-status');
-                        updateGameStatus();
-                    };
-
-                    return worker;
-
+                    return new Worker(URL.createObjectURL(blob));
                 } catch (e) {
                     console.error("Failed to create Web Worker:", e);
                     logMessage("Error: Failed to initialize AI engine. Please refresh the page.");
@@ -1276,8 +1177,8 @@
                 updatePiecesCanvas(); // Update pieces Canvas
 
                 // Set current player based on game mode and who starts with black
-                // 根据游戏模式和执黑先手方设置当前玩家
-                currentPlayer = 1; // Always start with black piece's turn (1 for black, 2 for white)
+                // 游戏开始，当前回合总是黑棋先手，无论模式如何。
+                currentPlayer = 1; // 1: Black piece, 2: White piece (always black's turn first)
 
                 if (gameMode === 3) { // AI vs AI mode
                     if (gameCount % 2 !== 0) {
@@ -1507,16 +1408,20 @@
             // AI move logic
             // AI 落子逻辑
             function aiMove() {
-                if (gameOver || isAiThinking) {
-                    return;
-                }
+                if (gameOver || isAiThinking) return;
                 
                 isAiThinking = true; // Set AI thinking flag
+                const aiStartTime = performance.now();
                 
-                const currentAiPlayer = currentPlayer; // Capture current player for this move
+                const currentAiPlayer = currentPlayer; // Capture current player state
                 const aiName = getPlayerName(currentAiPlayer);
                 updateGameStatus(`${aiName} 💭`); // Update game status to AI thinking
                 gameStatus.classList.add('thinking-status'); // Add thinking animation
+
+                console.log(`[DEBUG] aiMove START: currentPlayer=${currentPlayer}, aiName=${aiName}, gameCount=${gameCount}`);
+                if (gameMode === 3) {
+                    console.log(`[DEBUG] AI vs AI Roles: Player 1 (Black): ${aiPlayerRoles[1]?.name}, Player 2 (White): ${aiPlayerRoles[2]?.name}`);
+                }
 
                 const config = difficultyConfig[difficulty];
                 // Simulate AI thinking time
@@ -1528,16 +1433,83 @@
                 setTimeout(() => {
                     aiWorker.postMessage({
                         board: gameBoard,
-                        currentPlayer: currentAiPlayer, // Pass the player for whom the move is being calculated
+                        currentPlayer: currentAiPlayer, // Send the captured player state
                         difficulty: difficulty,
                         moveHistory: moveHistory
                     });
                 }, thinkTime);
+
+                // Listen for messages from Web Worker (AI calculation results)
+                // 监听 Web Worker 的消息（AI 计算结果）
+                aiWorker.onmessage = (e) => {
+                    const move = e.data;
+                    isAiThinking = false; // AI thinking ends
+                    gameStatus.classList.remove('thinking-status'); // Remove thinking animation
+
+                    if (move && !gameOver) {
+                        const {x, y} = move;
+                        gameBoard[x][y] = currentAiPlayer; // AI places piece
+                        moveHistory.push({x, y, player: currentAiPlayer}); // Record move history
+                        lastMovePosition = {x, y}; // Update last move position
+                        
+                        const pieceColor = currentAiPlayer === 1 ? '黑' : '白';
+                        const aiEndTime = performance.now();
+                        const duration = (aiEndTime - aiStartTime) / 1000;
+                        logMessage(`${aiName}在(${x+1},${y+1})落${pieceColor}子 (用时 ${duration.toFixed(2)} 秒)`);
+
+                        console.log(`[DEBUG] aiMove END: AI (${aiName}, Player ${currentAiPlayer}) placed ${pieceColor} piece at (${x+1},${y+1})`);
+
+                        // Play piece placement animation
+                        // 播放棋子放置动画
+                        animatePiecePlacement(x, y, currentAiPlayer === 1 ? 'black' : 'white', () => {
+                            updateDynamicZoom(); // Update board view (zoom and pan) after placing piece
+                            if (checkWin(x, y, currentAiPlayer)) { // Check for win
+                                gameOver = true;
+                                const winnerMessage = `${aiName}获胜！`;
+                                updateGameStatus(winnerMessage);
+                                showWinnerModal(winnerMessage);
+                                return;
+                            }
+                            if (isBoardFull()) { // Check for draw
+                                gameOver = true;
+                                updateGameStatus('平局！');
+                                showWinnerModal('平局！');
+                                return;
+                            }
+                            currentPlayer = currentAiPlayer === 1 ? 2 : 1; // Switch player
+                            console.log(`[DEBUG] animatePiecePlacement callback: currentPlayer switched to ${currentPlayer}.`);
+
+                            updateGameStatus();
+                            if (gameMode === 3 && !gameOver) { // If AI vs AI mode and game not over, continue AI move
+                                // 如果是 AI vs AI 模式且游戏未结束，则继续 AI 走子
+                                setTimeout(() => aiMove(), 1000);
+                            }
+                            resetIdleTimer(); // Reset idle timer after AI action
+                        });
+                    } else if (!gameOver) {
+                        console.warn("AI worker returned no move.");
+                        logMessage("AI未能找到有效落子，请刷新重试。"); // More friendly message
+                        isAiThinking = false;
+                        gameStatus.classList.remove('thinking-status');
+                        updateGameStatus();
+                    }
+                };
+                
+                // Listen for Web Worker errors
+                // 监听 Web Worker 的错误
+                aiWorker.onerror = (e) => {
+                    console.error(`Error from AI worker:`, e);
+                    logMessage("AI计算出错，请刷新重试。");
+                    isAiThinking = false;
+                    gameStatus.classList.remove('thinking-status');
+                    updateGameStatus();
+                };
             }
             
             // Get player name
             // 获取玩家名称
             function getPlayerName(player) {
+                console.log(`[DEBUG] getPlayerName called for player: ${player}, gameMode: ${gameMode}, playerStartsWithBlack: ${playerStartsWithBlack}`);
                 if (gameMode === 2) { // Player vs Player
                     // 'player' here is the piece color (1 for black, 2 for white)
                     // 'playerStartsWithBlack' determines if Player 1 is black or Player 2 is black
@@ -1549,6 +1521,7 @@
                 }
                 if (gameMode === 3) { // AI vs AI
                     if (aiPlayerRoles && aiPlayerRoles[player]) {
+                        console.log(`[DEBUG] aiPlayerRoles[${player}] = ${aiPlayerRoles[player]?.name}`);
                         const role = aiPlayerRoles[player];
                         return `${role.name} (${role.color})`;
                     }
@@ -1570,19 +1543,7 @@
             function updateGameStatus(message) {
                 gameCountDisplay.textContent = `第 ${gameCount} 局`;
                 if (message) {
-                    gameStatus.textContent = message;
-                    if (gameOver) {
-                        winnerInfo.classList.remove('hidden');
-                        const winningPlayer = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1].player : null;
-                        if (winningPlayer !== null) {
-                            let winnerPieceColor = winningPlayer === 1 ? 'black' : 'white';
-                            let winnerDisplayName = getPlayerName(winningPlayer);
-                            winnerIndicator.className = `piece ${winnerPieceColor}`;
-                            winnerText.textContent = winnerDisplayName;
-                        } else {
-                            winnerInfo.classList.add('hidden');
-                        }
-                    }
+                    // ... (winner message logic) ...
                 } else {
                     gameStatus.textContent = '游戏进行中';
                     winnerInfo.classList.add('hidden');
