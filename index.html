@@ -596,10 +596,10 @@
         function evaluatePattern(pattern) {
             // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
             // Five in a row (winning condition)
-            if (pattern.includes('PPPPP')) return 100000;
+            if (pattern.includes('PPPPP')) return 10000;
 
             // Live Four: _PPPP_
-            if (pattern.includes('_PPPP_')) return 10000;
+            if (pattern.includes('_PPPP_')) return 9000;
             if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 7000;
             
             // Blocked Four (冲四)
@@ -627,13 +627,13 @@
             // Defensive evaluation (opponent's patterns)
             // Defensive evaluation (opponent's patterns)
             const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
-            if (opponentPattern.includes('PPPPP')) return -900000;
-            if (opponentPattern.includes('_PPPP_')) return -40000;
-            if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -10000;
-            if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -10000;
-            if (opponentPattern.includes('_PPP_')) return -4500;
-            if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -4090;
-            if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -2600;
+            if (opponentPattern.includes('PPPPP')) return -9000;
+            if (opponentPattern.includes('_PPPP_')) return -4000;
+            if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -1000;
+            if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -1000;
+            if (opponentPattern.includes('_PPP_')) return -750;
+            if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -709;
+            if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -460;
             if (opponentPattern.includes('_PP_')) return -200;
             
             return 1;
