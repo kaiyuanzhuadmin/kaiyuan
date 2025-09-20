@@ -593,51 +593,82 @@
 
         // --- All AI calculation functions are moved here ---
         // All AI calculation functions are moved here.
-        function evaluatePattern(pattern) {
-            // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
-            // Five in a row (winning condition)
-            if (pattern.includes('PPPPP')) return 5000;
+  function evaluatePattern(pattern) {
+    // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
 
-            // Live Four: _PPPP_
-            if (pattern.includes('_PPPP_')) return 2000;
-            if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 1000;
-            
-            // Blocked Four (冲四)
-            if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 620;
-            if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 180;
+    // === Offensive Patterns (Player's Perspective) ===
 
-            // Live Three: _PPP_
-            if (pattern.includes('_PPP_')) return 116;
-            if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 106;
+    // Five in a row (winning condition)
+    if (pattern.includes('PPPPP')) return 100000;
 
-            // Blocked Three (眠三)
-            if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 60;
-            if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 50;
+    // Live Four: _PPPP_ (can win next move)
+    if (pattern.includes('_PPPP_')) return 10000;
 
-            // Live Two: __PP__
-            if (pattern.includes('__PP__')) return 15;
-            if (pattern.includes('__P_P__')) return 10;
+    // Half-open Four: _P_PPP_, _PP_PP_, _PPP_P_ (one move to live four)
+    if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 5000;
 
-            // Blocked Two (眠二)
-            if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8;
-            
-            // Live One (活一)
-            if (pattern.includes('_P_')) return 1;
-            
-            // Defensive evaluation (opponent's patterns)
-            // Defensive evaluation (opponent's patterns)
-            const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
-            if (opponentPattern.includes('PPPPP')) return -5000;
-            if (opponentPattern.includes('_PPPP_')) return -2000;
-            if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -1000;
-            if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -900;
-            if (opponentPattern.includes('_PPP_')) return -630;
-            if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -609;
-            if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -360;
-            if (opponentPattern.includes('_PP_')) return -100;
-            
-            return 1;
-        }
+    // Blocked Four (冲四): BPPPP_, _PPPPB, BPPPP, PPPPB (one-sided open four)
+    if (pattern.includes('BPPPP_') || pattern.includes('_PPPPB') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 4000;
+
+    // Broken Four: P_PPP, PP_PP, PPP_P (gapped four, potential to form five)
+    if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 1000;
+
+    // Live Three: _PPP_ (can form live four in two ways)
+    if (pattern.includes('_PPP_')) return 2000;
+
+    // Half-open Three: _P_PP_, _PP_P_ (one move to live three)
+    if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 800;
+
+    // Blocked Three (眠三): BPPP_, _PPPB (one-sided open three)
+    if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 500;
+
+    // Broken Blocked Three: BP_PP_, _PP_PB (gapped, one-sided three)
+    if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 300;
+
+    // Live Two: __PP__ (two in a row with open ends)
+    if (pattern.includes('__PP__')) return 100;
+
+    // Half-open Two: __P_P__ (gapped two with open ends)
+    if (pattern.includes('__P_P__')) return 50;
+
+    // Blocked Two (眠二): BPP___, ___PPB (one-sided open two)
+    if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 20;
+
+    // Live One: _P_ (single piece with open ends)
+    if (pattern.includes('_P_')) return 10;
+
+    // === Defensive Patterns (Opponent's Perspective) ===
+
+    // Swap P and O to evaluate opponent's patterns
+    const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
+
+    // Opponent's Five in a row (immediate loss)
+    if (opponentPattern.includes('PPPPP')) return -100000;
+
+    // Opponent's Live Four (must block immediately)
+    if (opponentPattern.includes('_PPPP_')) return -50000;
+
+    // Opponent's Blocked Four (high-priority block)
+    if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -10000;
+
+    // Opponent's Half-open Four (potential live four)
+    if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -8000;
+
+    // Opponent's Live Three (potential live four)
+    if (opponentPattern.includes('_PPP_')) return -5000;
+
+    // Opponent's Half-open Three
+    if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -2000;
+
+    // Opponent's Blocked Three
+    if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -1000;
+
+    // Opponent's Live Two
+    if (opponentPattern.includes('_PP_')) return -500;
+
+    // Default score for non-threatening patterns
+    return 1;
+}
 
         // Evaluate the offensive and defensive value of a single position
         // 评估单个位置的攻防价值
