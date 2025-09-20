@@ -596,45 +596,45 @@
         function evaluatePattern(pattern) {
             // P: Player's piece, O: Opponent's piece, _: Empty, B: Boundary/Blocked
             // Five in a row (winning condition)
-            if (pattern.includes('PPPPP')) return 10000;
+            if (pattern.includes('PPPPP')) return 5000;
 
             // Live Four: _PPPP_
-            if (pattern.includes('_PPPP_')) return 9000;
-            if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 7000;
+            if (pattern.includes('_PPPP_')) return 2000;
+            if (pattern.includes('_P_PPP_') || pattern.includes('_PP_PP_') || pattern.includes('_PPP_P_')) return 1000;
             
             // Blocked Four (冲四)
-            if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 6200;
-            if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 1800;
+            if (pattern.includes('BPPPP_') || pattern.includes('_PPPPH') || pattern.includes('BPPPP') || pattern.includes('PPPPB')) return 620;
+            if (pattern.includes('P_PPP') || pattern.includes('PP_PP') || pattern.includes('PPP_P')) return 180;
 
             // Live Three: _PPP_
-            if (pattern.includes('_PPP_')) return 690;
-            if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 660;
+            if (pattern.includes('_PPP_')) return 116;
+            if (pattern.includes('_P_PP_') || pattern.includes('_PP_P_')) return 106;
 
             // Blocked Three (眠三)
-            if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 100;
-            if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 150;
+            if (pattern.includes('BPPP_') || pattern.includes('_PPPB')) return 60;
+            if (pattern.includes('BP_PP_') || pattern.includes('_PP_PB')) return 50;
 
             // Live Two: __PP__
-            if (pattern.includes('__PP__')) return 100;
-            if (pattern.includes('__P_P__')) return 82;
+            if (pattern.includes('__PP__')) return 15;
+            if (pattern.includes('__P_P__')) return 10;
 
             // Blocked Two (眠二)
             if (pattern.includes('BPP___') || pattern.includes('___PPB')) return 8;
             
             // Live One (活一)
-            if (pattern.includes('_P_')) return 10;
+            if (pattern.includes('_P_')) return 1;
             
             // Defensive evaluation (opponent's patterns)
             // Defensive evaluation (opponent's patterns)
             const opponentPattern = pattern.replace(/P/g, 'TEMP').replace(/O/g, 'P').replace(/TEMP/g, 'O');
-            if (opponentPattern.includes('PPPPP')) return -9000;
-            if (opponentPattern.includes('_PPPP_')) return -4000;
+            if (opponentPattern.includes('PPPPP')) return -5000;
+            if (opponentPattern.includes('_PPPP_')) return -2000;
             if (opponentPattern.includes('BPPPP_') || opponentPattern.includes('_PPPPB')) return -1000;
-            if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -1000;
-            if (opponentPattern.includes('_PPP_')) return -750;
-            if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -709;
-            if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -460;
-            if (opponentPattern.includes('_PP_')) return -200;
+            if (opponentPattern.includes('P_PPP_') || opponentPattern.includes('_PPP_P')) return -900;
+            if (opponentPattern.includes('_PPP_')) return -630;
+            if (opponentPattern.includes('_P_PP_') || opponentPattern.includes('_PP_P_')) return -609;
+            if (opponentPattern.includes('BPPP__') || opponentPattern.includes('__PPPB')) return -360;
+            if (opponentPattern.includes('_PP_')) return -100;
             
             return 1;
         }
